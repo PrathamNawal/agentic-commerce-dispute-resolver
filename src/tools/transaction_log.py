@@ -24,3 +24,12 @@ def lookup_dispute(dispute_id: str) -> dict:
 
 def load_all_disputes() -> list[dict]:
     return json.loads(DATA_PATH.read_text())
+
+
+def lookup_dispute_with_gold(dispute_id: str) -> dict:
+    """Full record including gold_resolution/gold_rationale — for the Reviewer Agent and eval
+    harness only. Never pass this to Intake/Policy/Resolution; they must not see the answer."""
+    for d in load_all_disputes():
+        if d["id"] == dispute_id:
+            return d
+    return {"error": f"no dispute found with id {dispute_id}"}

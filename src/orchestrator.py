@@ -21,7 +21,7 @@ from src.agents.reviewer import build_reviewer_agent
 from src.observability import traced
 from src.schemas import IntakeSummary, PolicyFinding, ReviewScore, Resolution
 from src.tools.escalation_queue import queue_for_review
-from src.tools.transaction_log import lookup_dispute
+from src.tools.transaction_log import lookup_dispute_with_gold
 
 
 @dataclass
@@ -74,7 +74,7 @@ def resolve_dispute_stream(
         )
     yield "resolution", resolution
 
-    dispute_record = lookup_dispute(dispute_id)
+    dispute_record = lookup_dispute_with_gold(dispute_id)
     review_run = reviewer_agent.run(
         f"Dispute record: {dispute_record}\n"
         f"Intake: {intake.model_dump()}\n"

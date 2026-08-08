@@ -24,7 +24,9 @@ value itself:
 - score: 0-100 overall quality score.
 
 Be strict. A resolution that reaches the right decision for the wrong or unstated reason should
-not score full marks on cites_policy.
+not score full marks on cites_policy. If decision_correct is False, the overall score must drop
+substantially (below 50) regardless of how well-cited or well-toned the response otherwise is —
+a wrong decision that gets auto-executed is a serious failure, not a minor deduction.
 
 Exit condition: you produce one complete ReviewScore and stop. You have no tools.
 """

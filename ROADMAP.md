@@ -41,14 +41,28 @@ messages or chat history.
 
 ## Phase 4 — Eval (formal scorecard)
 
-- [ ] **Run `evals/run_eval.py` live** once a key is in place — get the real baseline accuracy
-      number, not the 80% target
-- [ ] **Run `/anthropic-skills:eval-scorecard`** for a structured pass/fail scorecard against
-      the criteria in `design/DESIGN_DOC.md` Section 7
-- [ ] **Before/after eval comparison** — deliberately weaken or improve a prompt and diff the
-      eval numbers; this diff is the actual "I built evals to upskill the agent" artifact
-- [ ] **Spot-check Reviewer Agent scores against your own judgment** — an LLM grading LLM
-      output is a named risk in the design doc; a handful of manual checks is cheap insurance
+- [x] **Run `evals/run_eval.py` live** — real baseline: **50% decision accuracy** (5/10),
+      well below the 80% target. Also caught a real bug (see below) that means the *avg
+      reviewer score* from this run (100/100) is invalid — decision accuracy itself is not,
+      since it's computed in Python against `gold_resolution`, not by the LLM
+- [x] **Spot-check Reviewer Agent scores against your own judgment** — this is what caught
+      the bug: `decision_correct=True` on literally every case in the first run, including
+      all 5 wrong decisions. Root cause: the Reviewer Agent never received `gold_resolution`
+      (it was stripped by the same `lookup_dispute()` the Intake Agent correctly uses to avoid
+      seeing the answer). Fixed via a new `lookup_dispute_with_gold()`, used only by the
+      Reviewer/eval path. Named as a risk in the design doc before it was ever observed —
+      worth noting that predicting a risk and then actually catching it are different things
+- [x] **Run `/anthropic-skills:eval-scorecard`** — [`evals/EVAL_SCORECARD.md`](evals/EVAL_SCORECARD.md).
+      Scored 2 of 5 test cases fully (real captured output); the other 3 have real
+      decision-correctness data but pending qualitative scoring — Groq's free-tier daily
+      token cap (100k TPD) was exhausted mid-session running the full eval + this scorecard's
+      data-gathering. **Re-run once quota resets** to fill in the pending cells and re-verify
+      the Reviewer Agent fix live (see EVAL_SCORECARD.md Section 4/5 for what's pending)
+- [ ] **Before/after eval comparison** — now has a real baseline to diff against (50%
+      decision accuracy, v1.0 in the scorecard's prompt iteration log). Next: address the
+      fault-hypothesis misclassification pattern (the biggest driver of the failures) and
+      re-run to get a genuine before/after — this diff is the actual "I built evals to
+      upskill the agent" artifact, and it doesn't exist yet, only the "before" half does
 
 ## Phase 5 — Ship / Showcase
 
