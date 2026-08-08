@@ -45,6 +45,7 @@ def resolve_dispute(dispute_id: str, model_id: str = "llama-3.3-70b-versatile") 
     policy: PolicyFinding = policy_run.content
 
     resolution_run = resolution_agent.run(
+        f"Intake fault hypothesis: {intake.fault_hypothesis}\n"
         f"Intake summary: {intake.summary}\n"
         f"Key facts: {intake.key_facts}\n"
         f"Policy finding: {policy.applicable_policy} (source: {policy.policy_source})\n"

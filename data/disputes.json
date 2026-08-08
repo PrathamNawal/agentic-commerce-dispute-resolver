@@ -1,6 +1,7 @@
 [
   {
     "id": "D-001",
+    "label": "Wrong variant shipped",
     "buyer_agent": "shopping-copilot-v2",
     "merchant": "Everline Electronics",
     "transaction": {
@@ -19,6 +20,7 @@
   },
   {
     "id": "D-002",
+    "label": "Charged twice",
     "buyer_agent": "shopping-copilot-v2",
     "merchant": "Everline Electronics",
     "transaction": {
@@ -37,6 +39,7 @@
   },
   {
     "id": "D-003",
+    "label": "No-returns policy",
     "buyer_agent": "shopping-copilot-v2",
     "merchant": "Artisan Home Goods",
     "transaction": {
@@ -55,6 +58,7 @@
   },
   {
     "id": "D-004",
+    "label": "Agent missed price guardrail",
     "buyer_agent": "shopping-copilot-v2",
     "merchant": "Pantry Direct",
     "transaction": {
@@ -74,6 +78,7 @@
   },
   {
     "id": "D-005",
+    "label": "Changed my mind",
     "buyer_agent": "shopping-copilot-v2",
     "merchant": "Trailhead Outdoors",
     "transaction": {
@@ -89,5 +94,100 @@
     "dispute_reason": "Buyer simply changed their mind and no longer wants the backpack; requests refund citing standard 30-day return window",
     "gold_resolution": "refund",
     "gold_rationale": "No agent or merchant error occurred. This is a standard buyer's-remorse return within the merchant's stated 30-day window — process under normal return policy, unrelated to any agentic-purchase failure mode."
+  },
+  {
+    "id": "D-006",
+    "label": "Bundle item defective",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Everline Electronics",
+    "transaction": {
+      "item": "Home office bundle (desk lamp, cable organizer, USB hub)",
+      "amount_usd": 76.00,
+      "purchased_at": "2026-08-04T10:15:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'get me a basic home office bundle under $100'",
+      "Agent purchased a 3-item bundle from a single listing (desk lamp, cable organizer, USB hub)",
+      "Agent completed checkout autonomously via ACP; bundle is sold as a single non-separable SKU per merchant listing"
+    ],
+    "dispute_reason": "The USB hub in the bundle arrived dead on arrival; the other two items work fine. Buyer wants the hub fixed or replaced, not the whole bundle.",
+    "gold_resolution": "replace",
+    "gold_rationale": "Manufacturing defect on one component of a multi-item purchase is a standard merchant-side quality issue. Replace only the defective component (or the smallest replaceable unit the merchant supports); no need to touch the working items or escalate."
+  },
+  {
+    "id": "D-007",
+    "label": "Unexpected customs fee",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Nordic Design Co (int'l)",
+    "transaction": {
+      "item": "Ceramic pour-over coffee set",
+      "amount_usd": 58.00,
+      "purchased_at": "2026-08-02T19:30:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'find a nice pour-over coffee set, budget around $60'",
+      "Agent selected an item from an international merchant (ships from EU); listing's structured data included an import-duty disclosure field",
+      "Agent completed purchase without relaying the import-duty disclosure to the user before checkout"
+    ],
+    "dispute_reason": "Buyer was charged a $14 customs/import fee on delivery that they say they were never told about",
+    "gold_resolution": "deny",
+    "gold_rationale": "The import-duty term was present and legitimate in the merchant's listing data at time of purchase — this is a real, disclosed cost of international shipping, not a merchant error or a policy violation. The agent's failure to proactively surface it is a UX gap worth logging, but it does not entitle the buyer to a refund of a legitimate customs charge; deny the dispute and note the disclosure gap separately."
+  },
+  {
+    "id": "D-008",
+    "label": "High-value wrong item",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Summit Cycle Supply",
+    "transaction": {
+      "item": "Carbon road bike frame, size M",
+      "amount_usd": 340.00,
+      "purchased_at": "2026-08-06T13:00:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'buy the carbon frame from Summit Cycle Supply, size medium, budget up to $400'",
+      "Agent selected the listed size-medium carbon frame and completed checkout via ACP",
+      "Merchant's fulfillment system shipped a size-large frame instead of the ordered medium — a warehouse picking error on the merchant's side"
+    ],
+    "dispute_reason": "Buyer received the wrong frame size entirely; wants a refund or the correct item",
+    "gold_resolution": "escalate",
+    "gold_rationale": "The fault is unambiguous (merchant warehouse error), but the transaction amount ($340) exceeds the guardrail threshold. Per the escalation guardrail, high-dollar cases route to human review regardless of how clear-cut the fault determination is — the agent's suggested decision (replace) should still be produced as a recommendation for the reviewer."
+  },
+  {
+    "id": "D-009",
+    "label": "Conflicting instructions",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Everline Electronics",
+    "transaction": {
+      "item": "Bluetooth speaker",
+      "amount_usd": 64.00,
+      "purchased_at": "2026-08-07T15:45:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'buy a bluetooth speaker, something waterproof'",
+      "Agent selected a speaker marked water-resistant (not fully waterproof) — closest match available under budget",
+      "Agent's log does not record whether it flagged the water-resistant vs. waterproof distinction to the user before purchase"
+    ],
+    "dispute_reason": "Buyer says they explicitly told the agent (in a prior conversation turn not captured in this transaction's action log) that the item had to be fully waterproof, not just water-resistant, and that the agent should have refused to buy this item",
+    "gold_resolution": "escalate",
+    "gold_rationale": "The action log doesn't clearly establish fault: it's undetermined whether the agent ignored a real constraint or the buyer is misremembering an instruction that was never actually given. This is a genuinely unclear fault hypothesis, not just a low-confidence policy match — it should escalate to human review regardless of the transaction amount, since no policy lookup can resolve a factual dispute about what instruction was actually given."
+  },
+  {
+    "id": "D-010",
+    "label": "Subscription not cancelled",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Pantry Direct",
+    "transaction": {
+      "item": "Monthly protein powder subscription",
+      "amount_usd": 24.99,
+      "purchased_at": "2026-08-01T08:00:00Z"
+    },
+    "agent_action_log": [
+      "User instructed on 2026-07-10: 'cancel my protein powder subscription, I don't need it anymore'",
+      "Agent logged the cancellation request but the cancellation tool call failed silently (no retry, no error surfaced to user)",
+      "Subscription renewed and charged again on 2026-08-01, three weeks after the cancellation request"
+    ],
+    "dispute_reason": "Buyer was charged for a subscription they explicitly asked the agent to cancel three weeks earlier",
+    "gold_resolution": "refund",
+    "gold_rationale": "Clear purchasing-agent failure: the cancellation instruction was received and logged, but the agent's tool call failed without any error handling or user notification. Full refund of the renewal charge; flag the agent's cancellation tool as needing failure-detection and retry logic."
   }
 ]

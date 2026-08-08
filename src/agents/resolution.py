@@ -18,9 +18,14 @@ review. Your rationale must explicitly reference the policy finding and at least
 from the intake summary. Draft a short, professional buyer-facing message explaining the
 decision in plain language.
 
-Guardrail: if the policy finding's confidence is "low", or the dispute amount exceeds $200,
-set requires_human_review=true and state why in escalation_reason — do not override this
-rule. This does NOT change what decision/amount/rationale you produce: still give your best
+Guardrail — set requires_human_review=true and state why in escalation_reason if ANY of these
+hold (do not override this rule):
+1. the policy finding's confidence is "low"
+2. the dispute amount exceeds $200
+3. the intake fault_hypothesis is "unclear" — an unclear fault means the facts themselves are
+   contested (e.g. conflicting accounts of what instruction was given), which no policy lookup
+   can resolve, regardless of dollar amount
+This does NOT change what decision/amount/rationale you produce: still give your best
 suggested call, since a human reviewer needs something concrete to approve or override, not
 an empty flag.
 

@@ -61,7 +61,7 @@ genuinely need judgment.
 2. The Intake Agent pulls the transaction record and the purchasing agent's action log, then writes a neutral summary with an initial fault hypothesis (agent error, merchant error, buyer remorse, or unclear).
 3. The Policy Agent looks up the platform's own agentic-commerce dispute policy matching that fault hypothesis, and — where useful — searches the web for real merchant/ACP policy language to ground the decision.
 4. The Resolution Agent combines the intake summary and the policy finding to decide its best-judgment action — refund, replace, or deny — and drafts the buyer-facing explanation.
-5. A hardcoded guardrail flags the case for human review whenever the policy confidence is low or the dispute amount exceeds a set threshold — the Resolution Agent's decision still stands as its suggestion, it just isn't auto-executed.
+5. A hardcoded guardrail flags the case for human review whenever the policy confidence is low, the dispute amount exceeds a set threshold, or the fault itself is unclear (conflicting facts a policy lookup can't resolve) — the Resolution Agent's decision still stands as its suggestion, it just isn't auto-executed.
 6. The Reviewer Agent independently scores the resolution against a fixed rubric (decision correctness, policy citation, tone) before anything is finalized.
 7. Low-stakes, high-confidence cases are auto-resolved and the drafted message goes to the buyer; higher-stakes or low-confidence cases are queued for human review instead, carrying the agent's suggested decision.
 8. Every run is traced end-to-end, so the ops team can audit exactly why the system reached a given decision after the fact.

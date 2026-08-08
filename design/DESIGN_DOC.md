@@ -37,9 +37,9 @@ pipeline and remains the dev/scripting entrypoint underneath the UI.
   fraud-suspicion sub-agent invoked only for a subset of cases — that's Level 4.
 - **What complexity this avoids:** no orchestrator/router logic, no dynamic tool selection, no
   agent-to-agent negotiation. The one piece of dynamic behavior in the system (the
-  confidence/amount escalation guardrail) is a plain `if` check in the Resolution Agent's
-  prompt, not agentic reasoning — and that's deliberate, since a guardrail you can't audit as
-  a fixed rule is a worse guardrail.
+  confidence/amount/unclear-fault escalation guardrail) is a plain `if` check in the
+  Resolution Agent's prompt, not agentic reasoning — and that's deliberate, since a guardrail
+  you can't audit as a fixed rule is a worse guardrail.
 
 ## 3. Workflow Diagram
 
@@ -69,6 +69,7 @@ pipeline and remains the dev/scripting entrypoint underneath the UI.
 │  RESOLUTION AGENT                          │
 │  input: intake summary + policy finding    │
 │  guardrail: confidence=low OR amount>$200  │
+│             OR fault_hypothesis=unclear    │
 │             → set requires_human_review=   │
 │               true (decision still filled  │
 │               in as a suggestion, never    │
@@ -243,10 +244,10 @@ any UI work (Streamlit) is considered "done."
   "Prompt Chain (Level 2)" to make the honest architecture classification visible in the
   diagram itself, not just in the text.
 - **Special annotations:** mark the Resolution Agent's guardrail check with a red diamond
-  ("if confidence=low OR amount>$200 → requires_human_review=true, decision stays a
-  suggestion") — this is the critical path where autonomy is deliberately gated, and it
-  should visually stand out as the one non-linear decision point in an otherwise
-  straight-line chain.
+  ("if confidence=low OR amount>$200 OR fault_hypothesis=unclear → requires_human_review=true,
+  decision stays a suggestion") — this is the critical path where autonomy is deliberately
+  gated, and it should visually stand out as the one non-linear decision point in an
+  otherwise straight-line chain.
 
 ## Roadmap
 

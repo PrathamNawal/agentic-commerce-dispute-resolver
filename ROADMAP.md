@@ -12,11 +12,12 @@ messages or chat history.
 - [ ] **Live smoke test** — run `uv run main.py D-001` with a real Groq key to confirm the
       agents produce sane structured output against a live model, not just static checks —
       *blocked on: `GROQ_API_KEY` in `.env`*
-- [ ] **Expand the dataset** beyond the 5 seed disputes — more coverage makes the eventual
-      eval numbers credible, especially edge cases (multi-item orders, cross-border,
-      subscription disputes)
-- [ ] **Second escalation guardrail dimension** — today's guardrail is a single $200
-      threshold; add a fault-hypothesis-based rule too (see design doc's Top 3 Risks)
+- [x] **Expand the dataset** beyond the 5 seed disputes — now 10, covering multi-item bundles,
+      cross-border customs fees, a high-dollar guardrail test, an ambiguous-fault case, and a
+      distinct subscription-cancellation failure
+- [x] **Second escalation guardrail dimension** — the Resolution Agent now also flags
+      `requires_human_review` when the intake `fault_hypothesis` is `"unclear"`, regardless of
+      amount or policy confidence (see design doc's Top 3 Risks)
 - [ ] **Streamlit UI** — build the three-view app (`Live demo`, `Eval dashboard`, `Review
       queue`) against the approved UX: plain-language problem statement up top, numbered
       step-by-step pipeline reveal, one obvious "Resolve this dispute" action

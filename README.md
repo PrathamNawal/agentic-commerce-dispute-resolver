@@ -44,7 +44,7 @@ agent core → tools → memory → guardrails → external services → observa
 | Memory | **Built, short-term only** | Each agent reasons over its own context window per dispute; no cross-session/vector memory — a dispute resolver doesn't need it in v1 |
 | Observability | **Built** | Langfuse tracing (`src/observability.py`), opt-in via env vars, no-ops if unset |
 | Evals | **Built** | `evals/run_eval.py` scores every run against a labeled gold set — see below |
-| Guardrails | **Stubbed** | One rule lives in the Resolution Agent's prompt (flag `requires_human_review` if policy confidence is low or amount > $200) rather than a full input-filter/output-check/circuit-breaker stack |
+| Guardrails | **Stubbed** | Rules live in the Resolution Agent's prompt (flag `requires_human_review` if policy confidence is low, amount > $200, or the intake fault hypothesis is unclear) rather than a full input-filter/output-check/circuit-breaker stack |
 | Human-in-the-loop | **Prep only** | Escalated cases carry a substantive suggested decision (not just a bare flag) and are queued to `outputs/escalations.json`; no review UI yet — see `design/DESIGN_DOC.md`'s roadmap appendix |
 | Orchestrator | **Stubbed** | A plain sequential function (`src/orchestrator.py`), not a general router — Agno's Team/Workflow machinery would be the seam to extend if branching logic were ever needed |
 | API Gateway, Client layer, Auth, Session mgmt | **Skipped** | This is a CLI script, not a hosted service — no reason to build infra for zero users |
