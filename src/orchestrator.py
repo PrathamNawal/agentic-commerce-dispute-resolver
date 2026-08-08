@@ -14,6 +14,7 @@ from src.agents.resolution import build_resolution_agent
 from src.agents.reviewer import build_reviewer_agent
 from src.observability import traced
 from src.schemas import IntakeSummary, PolicyFinding, ReviewScore, Resolution
+from src.tools.escalation_queue import queue_for_review
 from src.tools.transaction_log import lookup_dispute
 
 
@@ -50,6 +51,15 @@ def resolve_dispute(dispute_id: str, model_id: str = "llama-3.3-70b-versatile") 
         f"Policy supports: {policy.supports_resolution} (confidence: {policy.confidence})"
     )
     resolution: Resolution = resolution_run.content
+
+    if resolution.requires_human_review:
+        queue_for_review(
+            dispute_id=dispute_id,
+            suggested_decision=resolution.decision,
+            suggested_amount_usd=resolution.amount_usd,
+            suggested_rationale=resolution.rationale,
+            escalation_reason=resolution.escalation_reason or "no reason given",
+        )
 
     dispute_record = lookup_dispute(dispute_id)
     review_run = reviewer_agent.run(

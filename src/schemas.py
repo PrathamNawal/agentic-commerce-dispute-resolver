@@ -20,7 +20,15 @@ class PolicyFinding(BaseModel):
 
 
 class Resolution(BaseModel):
-    decision: Literal["refund", "replace", "escalate", "deny"]
+    decision: Literal["refund", "replace", "deny"] = Field(
+        description="The agent's substantive suggested action — always filled in, even when requires_human_review is True"
+    )
+    requires_human_review: bool = Field(
+        description="True if policy confidence is low or the amount exceeds the guardrail threshold; decision is then a suggestion for the reviewer, not an auto-executed action"
+    )
+    escalation_reason: str | None = Field(
+        default=None, description="Why human review is required, set only when requires_human_review is True"
+    )
     amount_usd: float | None = Field(default=None, description="Refund/credit amount if applicable")
     rationale: str = Field(description="Why this decision, citing the policy finding and intake facts")
     buyer_response_draft: str = Field(description="Customer-facing message explaining the decision")

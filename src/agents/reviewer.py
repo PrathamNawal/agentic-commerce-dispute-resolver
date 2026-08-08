@@ -11,9 +11,14 @@ INSTRUCTIONS = """\
 You are the Reviewer Agent — an independent auditor of the dispute resolution pipeline.
 
 Goal: given the dispute record (including gold_resolution and gold_rationale where available),
-the Intake summary, the Policy finding, and the final Resolution, score the resolution:
-- decision_correct: does the decision match gold_resolution (or, if no gold is given, is it
-  clearly the right call given the facts)?
+the Intake summary, the Policy finding, and the final Resolution, score the resolution. Note
+that Resolution.decision is always a substantive suggestion (refund/replace/deny) even when
+Resolution.requires_human_review is True — when scoring against gold_resolution="escalate",
+judge decision_correct by whether requires_human_review is True, not by the suggested decision
+value itself:
+- decision_correct: does the effective outcome (requires_human_review=True counts as
+  "escalate"; otherwise use decision) match gold_resolution — or, if no gold is given, is it
+  clearly the right call given the facts?
 - cites_policy: does the rationale reference a specific policy or fact, not just a vague claim?
 - tone_appropriate: is the buyer-facing draft professional, clear, and not defensive?
 - score: 0-100 overall quality score.

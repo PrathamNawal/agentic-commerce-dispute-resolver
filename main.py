@@ -19,12 +19,20 @@ console = Console()
 
 
 def print_result(result) -> None:
+    if result.resolution.requires_human_review:
+        status_line = (
+            f"[bold yellow]QUEUED FOR HUMAN REVIEW[/bold yellow] — {result.resolution.escalation_reason}\n"
+            f"[cyan]Suggested decision:[/cyan] {result.resolution.decision}"
+        )
+    else:
+        status_line = f"[bold green]Auto-resolved: {result.resolution.decision}[/bold green]"
+
     console.print(Panel.fit(
         f"[bold]{result.dispute_id}[/bold]\n\n"
         f"[cyan]Fault hypothesis:[/cyan] {result.intake.fault_hypothesis}\n"
         f"[cyan]Policy supports:[/cyan] {result.policy.supports_resolution} "
         f"(confidence: {result.policy.confidence})\n\n"
-        f"[bold green]Decision: {result.resolution.decision}[/bold green]"
+        f"{status_line}"
         + (f" (${result.resolution.amount_usd})" if result.resolution.amount_usd else "")
         + f"\n[cyan]Rationale:[/cyan] {result.resolution.rationale}\n\n"
         f"[cyan]Buyer message:[/cyan] {result.resolution.buyer_response_draft}\n\n"

@@ -33,14 +33,16 @@ def run_eval(model_id: str) -> dict:
 
     for d in disputes:
         result = resolve_dispute(d["id"], model_id=model_id)
-        is_correct = result.resolution.decision == d.get("gold_resolution")
+        effective_outcome = "escalate" if result.resolution.requires_human_review else result.resolution.decision
+        is_correct = effective_outcome == d.get("gold_resolution")
         correct += int(is_correct)
         total_score += result.review.score
 
         rows.append({
             "dispute_id": d["id"],
             "gold_resolution": d.get("gold_resolution"),
-            "predicted_decision": result.resolution.decision,
+            "predicted_decision": effective_outcome,
+            "suggested_decision": result.resolution.decision,
             "decision_match": is_correct,
             "review_score": result.review.score,
             "reviewer_flags": {
