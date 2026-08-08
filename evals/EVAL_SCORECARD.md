@@ -7,9 +7,13 @@ Python against `gold_resolution` (`evals/run_eval.py`), independent of any LLM j
 that data is fully trustworthy for all 10 disputes. Qualitative scoring (reasoning quality,
 tone, guardrail-specific behavior) requires reading actual generated text, which I have for
 2 of the 5 test cases below (D-001, D-009 — captured from live runs this session). The other
-3 test cases' qualitative cells are marked **pending** rather than estimated — Groq's free-tier
-daily token cap (100,000 TPD) was exhausted mid-session; see Known Failure Modes below for
-what happened and why re-running now would just produce another 429.
+3 test cases' qualitative cells are marked **pending** rather than estimated. Two attempts to
+fill them in both hit real infrastructure limits, not code bugs: Groq's free-tier daily token
+cap (100,000 TPD) was exhausted first; after wiring an OpenRouter fallback specifically to
+route around that (see `src/model_config.py`), a full re-run then exhausted OpenRouter's own
+50-requests/day free cap too, since every call was routing through it with Groq down. Both
+reset on a fixed daily boundary, not a rolling window — see `ROADMAP.md` for the pending
+re-run and Known Failure Modes below for the Groq half of this story.
 
 ## Section 1 — Test Case Library
 
@@ -85,7 +89,8 @@ test case clears it. This is the honest number, not a rounded-up one.
 | Reviewer Agent had no access to the gold answer | `orchestrator.py` passed the Reviewer Agent the same gold-stripped `lookup_dispute()` record used by Intake (correctly, since Intake must never see the answer) — but Reviewer needs it and never got it | `decision_correct` was `True` on 100% of the first full eval run, including all 5 wrong decisions — the Reviewer Agent was structurally incapable of catching errors | Added `lookup_dispute_with_gold()`, used only by the Reviewer/eval path; fixed in code this session, re-verification blocked by rate limit (see below) |
 | Fault-hypothesis misclassification on inference-required cases | D-001 (listing-photo mismatch) and D-009 (contested prior instruction) both require inferring something not literally stated in the action log; the model picks a confident wrong category instead of flagging uncertainty | Wrong fault hypothesis cascades into wrong policy match and wrong final decision — this is the single biggest driver of the 50% decision accuracy | No fix applied yet; candidates are few-shot examples of "when to say unclear" or restructuring Intake's exit condition to require explicit uncertainty checking |
 | Unclear-fault guardrail depends on the model admitting uncertainty | D-009 was built specifically to trigger `fault_hypothesis="unclear"` and the resulting escalation guardrail; instead the Intake Agent confidently said `agent_error` | The guardrail dimension added this session has not yet been proven to fire on the one case it exists for — it's real risk, not a null result | Needs a verification step independent of the same model's self-reported confidence, not just a better prompt |
-| Groq free-tier daily token cap (100,000 TPD) is easy to exhaust | A single 10-dispute eval run costs roughly 50-60 LLM calls (4 agents × 10 disputes, plus `parser_model` passes for Intake/Policy) | Can't re-run the full eval more than once or twice per day on the free tier; blocked this exact scorecard from being fully live-verified in one session | OpenRouter fallback (already in the zero-cost stack, unused so far) or spreading eval runs across a UTC day boundary |
+| Groq free-tier daily token cap (100,000 TPD) is easy to exhaust | A single 10-dispute eval run costs roughly 50-60 LLM calls (4 agents × 10 disputes, plus `parser_model` passes for Intake/Policy) | Can't re-run the full eval more than once or twice per day on the free tier; blocked this exact scorecard from being fully live-verified in one session | Implemented: OpenRouter fallback (`src/model_config.py`), verified working live |
+| OpenRouter's free tier has its own daily cap (50 req/day) | With Groq down, the OpenRouter fallback added this session caught every single call instead of just the overflow — a full 10-dispute re-run alone approaches or exceeds 50 requests | Fallback resilience for occasional Groq hiccups doesn't scale to "Groq is fully out for the day" — both quotas exhausted in the same session, blocking the scorecard's remaining pending cells | Smaller eval subset for routine runs (see `ROADMAP.md`); a paid tier on either provider removes this ceiling entirely if the project ever needs real reliability |
 | Smaller models don't dodge the rate limit | Tried `llama-3.1-8b-instant` as a fallback; its 6,000 TPM cap is lower than a single request's token cost once tool schemas and instructions are included | Can't casually swap to a cheaper/faster model under time pressure | Would need a stripped-down prompt/tool-schema variant specifically for low-context models |
 | Legitimate charges get defaulted to "refund" | D-007's customs fee was disclosed in structured listing data and should have been denied, not refunded | Model appears biased toward the "safe-sounding" refund outcome rather than correctly holding the line on a legitimate charge | Needs more labeled examples of this pattern before a targeted prompt fix is justified — one data point isn't enough to prompt-tune against |
 

@@ -53,6 +53,17 @@ messages or chat history.
       actions are still the "planned" item under Human-in-the-loop below
 - [x] **Set up a Langfuse account** and drop keys into `.env` — tracing confirmed active
       (`is_tracing_enabled()` returns `True` after the dotenv-ordering fix above)
+- [ ] **Both free-tier daily quotas exhausted in one session** — after Groq's 100k TPD cap
+      maxed out, OpenRouter's own free-tier cap (50 requests/day — documented in the zero-cost
+      toolkit reference, now confirmed the hard way) also maxed out attempting the full
+      10-dispute × 4-stage eval re-run, since with Groq down every single call routed through
+      OpenRouter instead. Both reset on a fixed daily boundary (OpenRouter: confirmed midnight
+      UTC via its `X-RateLimit-Reset` header), not a rolling window — retrying sooner just
+      wastes calls. **Re-run the full eval once one of the two resets** — this is what's
+      blocking the pending cells in `evals/EVAL_SCORECARD.md` and the before/after comparison
+      below. Longer-term: a 10-dispute eval run is expensive relative to a 50/day free budget;
+      worth considering a smaller "smoke" eval subset (3-4 disputes) for routine iteration and
+      reserving the full 10-dispute run for less frequent checkpoints
 
 ## Phase 4 — Eval (formal scorecard)
 
