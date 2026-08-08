@@ -1,7 +1,7 @@
 # Agentic Commerce Dispute Resolver
 
 A multi-agent system that triages and resolves disputes arising from **AI purchasing agents**
-transacting on a user's behalf (Stripe Agentic Commerce Protocol-flavored) — not human-typed
+transacting on a user's behalf  — not human-typed
 support tickets, but disputes where the buyer, the merchant, or the AI shopping agent itself
 may be at fault.
 
