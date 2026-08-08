@@ -15,15 +15,16 @@ By 2026, AI shopping agents complete purchases autonomously via protocols like S
 That creates a new failure surface: duplicate charges from buggy tool-call retries, guardrail
 violations (agent ignores a user's price ceiling), listing-disclosure gaps, and the usual
 buyer's remorse — all mixed together, and someone (or something) has to adjudicate which is
-which before deciding refund / replace / escalate / deny.
+which before deciding refund / replace / deny — or flagging it for human review.
 
 ## Pipeline
 
 ```
 Intake Agent  -->  Policy Agent  -->  Resolution Agent  -->  Reviewer Agent
 (fault           (which platform     (refund/replace/       (scores the decision
- hypothesis)      policy applies)     escalate/deny +         against a rubric —
-                                       buyer-facing draft)     this is the eval seed)
+ hypothesis)      policy applies)     deny, flags human       against a rubric —
+                                       review + buyer-facing   this is the eval seed)
+                                       draft)
 ```
 
 Each agent is a single-purpose Agno `Agent` with a structured `output_schema` (see
@@ -75,7 +76,7 @@ uv run evals/run_eval.py
 each dispute carries a `gold_resolution` and `gold_rationale`. `evals/run_eval.py` runs the
 full pipeline over every dispute and reports:
 
-- **Decision accuracy** — does the pipeline's final decision match the gold resolution?
+- **Decision accuracy** — does the effective outcome (escalated cases count as `"escalate"`, otherwise the agent's decision) match the gold resolution?
 - **Avg reviewer score** — the independent Reviewer Agent's 0–100 rubric score (decision
   correctness, policy citation, tone), averaged across the run
 

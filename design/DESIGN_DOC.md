@@ -69,8 +69,13 @@ pipeline and remains the dev/scripting entrypoint underneath the UI.
 │  RESOLUTION AGENT                          │
 │  input: intake summary + policy finding    │
 │  guardrail: confidence=low OR amount>$200  │
-│             → force decision=escalate      │
-│  → Resolution{decision, amount, rationale, │
+│             → set requires_human_review=   │
+│               true (decision still filled  │
+│               in as a suggestion, never    │
+│               blanked out)                 │
+│  → Resolution{decision, requires_human_    │
+│               review, escalation_reason,   │
+│               amount, rationale,           │
 │               buyer_response_draft}        │
 └──────────┬─────────────────────────────────┘
            ▼
@@ -85,11 +90,11 @@ pipeline and remains the dev/scripting entrypoint underneath the UI.
      ┌─────┴──────┐
      ▼            ▼
 ┌─────────┐  ┌───────────────────┐
-│ AUTO-    │  │ ESCALATE TO       │   (output points)
-│ RESOLVE  │  │ HUMAN OPS REVIEW  │
-│ (send    │  │ (buyer message    │
-│ buyer    │  │  held, ops lead   │
-│ message) │  │  notified)        │
+│ AUTO-    │  │ QUEUED FOR        │   (output points)
+│ RESOLVE  │  │ HUMAN REVIEW      │
+│ (send    │  │ (written to       │
+│ buyer    │  │  outputs/         │
+│ message) │  │  escalations.json)│
 └─────────┘  └───────────────────┘
            │
            ▼
@@ -128,7 +133,7 @@ You are the {Agent Name} in an agentic-commerce dispute resolution pipeline.
 
 Goal: {single responsibility, e.g. "produce a neutral fault hypothesis, do not decide resolution"}
 
-{Guardrail, if any: e.g. "if confidence is low or amount > $200, you must choose escalate"}
+{Guardrail, if any: e.g. "if confidence is low or amount > $200, set requires_human_review=true — still produce your best-judgment decision as a suggestion, never leave it blank"}
 
 Exit condition: {what marks this agent's job done — e.g. "one complete {Schema} produced"}
 ```
@@ -147,8 +152,9 @@ Policy supports: {policy.supports_resolution} (confidence: {policy.confidence})
 **Critical constraint:** every agent's output is bound to a Pydantic `output_schema`
 (`IntakeSummary`, `PolicyFinding`, `Resolution`, `ReviewScore`). This is non-negotiable — the
 orchestrator passes `.content` directly between stages as typed objects, and the eval harness
-depends on `resolution.decision` being one of exactly four enum values, not free text that
-happens to contain the word "refund" somewhere.
+depends on `resolution.decision` being one of exactly three enum values (refund/replace/deny)
+plus the separate `resolution.requires_human_review` boolean, not free text that happens to
+contain the word "refund" somewhere.
 
 ### 4c. Memory Configuration
 
@@ -172,7 +178,7 @@ conversation history or session state, which this problem doesn't need at all.
 | `get_platform_policy` | Yes | Returns the platform's own hardcoded dispute-policy text for a fault category |
 | `search_merchant_policy` | Yes | Live DuckDuckGo web search, used by the Policy Agent to ground ambiguous cases in real-world policy language |
 | Payment/refund execution API | No | v1 only *decides* and *drafts*; it never actually moves money or triggers a real refund — see Section 5 |
-| Database write (audit log persistence) | Partial | Langfuse tracing covers this; there's no separate database write of decisions in v1 |
+| Database write (audit log persistence) | Partial | Langfuse tracing covers full-run audit; `escalation_queue.py` additionally persists escalated-case decisions to `outputs/escalations.json` (see roadmap appendix) — auto-resolved cases still have no separate DB write beyond tracing |
 
 **Upgrade path:** the highest-value next tool is a real refund/replace execution API — wiring
 the Resolution Agent's decision to an actual action (rather than a drafted-but-unexecuted
@@ -212,9 +218,9 @@ higher-dollar cases, per the brief's contra-indicators.
 
 | Criterion | What "good" looks like |
 |---|---|
-| Decision accuracy | `resolution.decision` matches `gold_resolution` in at least 80% of the labeled dataset (per the brief's target) |
+| Decision accuracy | The effective outcome (`"escalate"` if `requires_human_review` is true, otherwise `resolution.decision`) matches `gold_resolution` in at least 80% of the labeled dataset (per the brief's target) |
 | Policy citation | `resolution.rationale` references the specific policy category or fact the Policy Agent found — not a generic "per our policy" with no specifics |
-| Escalation safety | Zero wrongly-auto-resolved cases above the $200 guardrail threshold; occasional misses tolerated only below it |
+| Escalation safety | Zero wrongly-auto-resolved cases (`requires_human_review=false`) above the $200 guardrail threshold; occasional misses tolerated only below it |
 | Tone | `buyer_response_draft` reads as professional and non-defensive — a human could send it to a real customer without editing |
 | Latency | Full 4-agent pipeline completes in under 30 seconds per dispute |
 | Schema validity | Every agent's output parses as its declared Pydantic schema on the first attempt, with no retry needed |
@@ -237,9 +243,10 @@ any UI work (Streamlit) is considered "done."
   "Prompt Chain (Level 2)" to make the honest architecture classification visible in the
   diagram itself, not just in the text.
 - **Special annotations:** mark the Resolution Agent's guardrail check with a red diamond
-  ("if confidence=low OR amount>$200 → force escalate") — this is the critical path where
-  autonomy is deliberately overridden, and it should visually stand out as the one non-linear
-  decision point in an otherwise straight-line chain.
+  ("if confidence=low OR amount>$200 → requires_human_review=true, decision stays a
+  suggestion") — this is the critical path where autonomy is deliberately gated, and it
+  should visually stand out as the one non-linear decision point in an otherwise
+  straight-line chain.
 
 ## Appendix: Roadmap — Extension Points
 

@@ -47,7 +47,9 @@ genuinely need judgment.
 
 | Output | Format | Description |
 |---|---|---|
-| decision | enum: refund / replace / escalate / deny | The final resolution action |
+| decision | enum: refund / replace / deny | The agent's substantive suggested action — always filled in, even when human review is required |
+| requires_human_review | boolean | True when policy confidence is low or the amount exceeds the guardrail threshold; the decision above becomes a suggestion for the reviewer rather than an auto-executed action |
+| escalation_reason | string or null | Why human review is required, set only when requires_human_review is true |
 | amount_usd | float or null | Refund/credit amount, if applicable |
 | rationale | string | Explanation citing the applied policy and intake facts |
 | buyer_response_draft | string | Customer-facing message explaining the decision |
@@ -58,10 +60,10 @@ genuinely need judgment.
 1. A dispute is filed against a transaction that an AI purchasing agent completed autonomously; its dispute_id enters the pipeline.
 2. The Intake Agent pulls the transaction record and the purchasing agent's action log, then writes a neutral summary with an initial fault hypothesis (agent error, merchant error, buyer remorse, or unclear).
 3. The Policy Agent looks up the platform's own agentic-commerce dispute policy matching that fault hypothesis, and — where useful — searches the web for real merchant/ACP policy language to ground the decision.
-4. The Resolution Agent combines the intake summary and the policy finding to decide refund, replace, escalate, or deny, and drafts the buyer-facing explanation.
-5. A hardcoded guardrail forces escalation whenever the policy confidence is low or the dispute amount exceeds a set threshold, overriding whatever the Resolution Agent would otherwise decide.
+4. The Resolution Agent combines the intake summary and the policy finding to decide its best-judgment action — refund, replace, or deny — and drafts the buyer-facing explanation.
+5. A hardcoded guardrail flags the case for human review whenever the policy confidence is low or the dispute amount exceeds a set threshold — the Resolution Agent's decision still stands as its suggestion, it just isn't auto-executed.
 6. The Reviewer Agent independently scores the resolution against a fixed rubric (decision correctness, policy citation, tone) before anything is finalized.
-7. Low-stakes, high-confidence cases are auto-resolved and the drafted message goes to the buyer; higher-stakes or low-confidence cases are routed to a human ops reviewer instead.
+7. Low-stakes, high-confidence cases are auto-resolved and the drafted message goes to the buyer; higher-stakes or low-confidence cases are queued for human review instead, carrying the agent's suggested decision.
 8. Every run is traced end-to-end, so the ops team can audit exactly why the system reached a given decision after the fact.
 
 ## 5. Success Metrics
@@ -71,7 +73,7 @@ genuinely need judgment.
 | Decision accuracy vs. gold set | 80%+ | `evals/run_eval.py` comparing predicted decision to `gold_resolution` across the labeled dataset |
 | Escalation safety | Zero tolerance for wrongly auto-resolved cases above the escalation threshold; some tolerance for wrongly auto-resolved low-dollar cases | Reviewer Agent's `decision_correct` flag, segmented by transaction amount |
 | Latency | Under 30s end-to-end per dispute (4 sequential LLM calls) | Wall-clock time per run, logged via Langfuse trace |
-| Human effort per case | Ops reviewer only touches escalated cases, not full volume | % of disputes routed to `escalate` vs. auto-resolved, tracked across eval runs |
+| Human effort per case | Ops reviewer only touches escalated cases, not full volume | % of disputes with `requires_human_review=true` vs. auto-resolved, tracked across eval runs |
 
 ## 6. Constraints & Assumptions
 
