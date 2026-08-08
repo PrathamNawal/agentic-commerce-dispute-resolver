@@ -3,8 +3,8 @@ using a fixed rubric, independent of the agents that produced the resolution.
 """
 
 from agno.agent import Agent
-from agno.models.groq import Groq
 
+from src.model_config import build_fallback_config, build_model, build_openrouter_model
 from src.schemas import ReviewScore
 
 INSTRUCTIONS = """\
@@ -32,10 +32,15 @@ Exit condition: you produce one complete ReviewScore and stop. You have no tools
 """
 
 
-def build_reviewer_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
+def build_reviewer_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
+    if provider == "openrouter":
+        model, fallback_config = build_openrouter_model(), None
+    else:
+        model, fallback_config = build_model(model_id), build_fallback_config()
     return Agent(
         name="Reviewer Agent",
-        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
+        model=model,
+        fallback_config=fallback_config,
         instructions=INSTRUCTIONS,
         output_schema=ReviewScore,
         markdown=False,

@@ -3,8 +3,8 @@ where useful, real-world merchant/ACP policy language) applicable to the intake'
 """
 
 from agno.agent import Agent
-from agno.models.groq import Groq
 
+from src.model_config import build_fallback_config, build_model, build_openrouter_model
 from src.schemas import PolicyFinding
 from src.tools.policy_search import get_platform_policy, search_merchant_policy
 
@@ -21,15 +21,20 @@ that states which resolution the policy supports and how confident you are.
 """
 
 
-def build_policy_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
+def build_policy_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
+    if provider == "openrouter":
+        model, parser_model, fallback_config = build_openrouter_model(), build_openrouter_model(), None
+    else:
+        model, parser_model, fallback_config = build_model(model_id), build_model(model_id), build_fallback_config()
     return Agent(
         name="Policy Agent",
-        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
+        model=model,
+        fallback_config=fallback_config,
         tools=[get_platform_policy, search_merchant_policy],
         instructions=INSTRUCTIONS,
         output_schema=PolicyFinding,
         # See intake.py — Groq can't combine JSON-mode structured output with tool calling
         # in one request; parser_model does the schema parse as a separate untooled call.
-        parser_model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
+        parser_model=parser_model,
         markdown=False,
     )

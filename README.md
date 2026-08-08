@@ -90,6 +90,6 @@ improvement — the actual point of building this.
 
 ## Stack
 
-Agno (agent framework) · Groq (inference) · Langfuse (tracing) · Streamlit (demo UI) · uv
-(packaging) — all free-tier,
+Agno (agent framework) · Groq (inference, primary) · OpenRouter (inference, fallback on rate
+limits) · Langfuse (tracing) · Streamlit (demo UI) · uv (packaging) — all free-tier,
 zero marginal cost.

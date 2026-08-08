@@ -3,8 +3,8 @@ produces a neutral fault hypothesis before anyone argues a resolution.
 """
 
 from agno.agent import Agent
-from agno.models.groq import Groq
 
+from src.model_config import build_fallback_config, build_model, build_openrouter_model
 from src.schemas import IntakeSummary
 from src.tools.transaction_log import lookup_dispute
 
@@ -20,16 +20,21 @@ Exit condition: you have called lookup_dispute exactly once and produced a compl
 """
 
 
-def build_intake_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
+def build_intake_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
+    if provider == "openrouter":
+        model, parser_model, fallback_config = build_openrouter_model(), build_openrouter_model(), None
+    else:
+        model, parser_model, fallback_config = build_model(model_id), build_model(model_id), build_fallback_config()
     return Agent(
         name="Intake Agent",
-        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
+        model=model,
+        fallback_config=fallback_config,
         tools=[lookup_dispute],
         instructions=INSTRUCTIONS,
         output_schema=IntakeSummary,
         # Groq rejects JSON-mode response_format combined with tool calling in the same
         # request. parser_model runs the tool-calling pass untooled/un-JSON-mode, then a
         # separate call (no tools) parses the result into IntakeSummary.
-        parser_model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
+        parser_model=parser_model,
         markdown=False,
     )

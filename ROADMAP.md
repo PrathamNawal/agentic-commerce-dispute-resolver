@@ -23,6 +23,21 @@ messages or chat history.
       was misclassified as `agent_error` with high confidence instead of `unclear`, so it
       auto-resolved instead of escalating. Left as-is rather than prompt-tuned — that's exactly
       what the eval harness and Phase 4 work below are for.
+- [x] **OpenRouter fallback (zero-cost stack's built-in resilience item)** — Groq's free-tier
+      daily cap (100k TPD) was fully exhausted mid-session, exactly the scenario the stack
+      reference warns about. Set `OPENROUTER_API_KEY` in `.env` and every agent now falls back
+      automatically. Two things had to be handled, not one: Agno's `fallback_config` only
+      covers an agent's primary `model` — it does not cover `parser_model` (used by Intake and
+      Policy to work around Groq's JSON-mode + tool-calling conflict, see the bug above), and
+      a Groq failure inside `parser_model` doesn't raise at all, it silently returns an error
+      string as `.content`. `src/orchestrator.py`'s new `_run_stage()` helper explicitly
+      type-checks each stage's output and rebuilds the whole agent on OpenRouter if it's wrong
+      — see `src/model_config.py` for the full explanation. Verified end-to-end while Groq was
+      still rate-limited: full 4-stage pipeline, correct decision, 95/100 reviewer score, all
+      routed through OpenRouter's `nvidia/nemotron-3-super-120b-a12b:free`. Two other free
+      models were tried first and failed — one had been pulled from OpenRouter's free tier
+      entirely, the other had transient backend timeouts — confirming firsthand the "lineup
+      rotates" warning in the zero-cost toolkit reference
 - [x] **Expand the dataset** beyond the 5 seed disputes — now 10, covering multi-item bundles,
       cross-border customs fees, a high-dollar guardrail test, an ambiguous-fault case, and a
       distinct subscription-cancellation failure
