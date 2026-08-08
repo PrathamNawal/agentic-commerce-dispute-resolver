@@ -24,7 +24,7 @@ that states which resolution the policy supports and how confident you are.
 def build_policy_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
     return Agent(
         name="Policy Agent",
-        model=Groq(id=model_id),
+        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         tools=[get_platform_policy, search_merchant_policy],
         instructions=INSTRUCTIONS,
         output_schema=PolicyFinding,

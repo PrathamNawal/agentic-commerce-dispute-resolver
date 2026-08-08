@@ -23,7 +23,7 @@ Exit condition: you have called lookup_dispute exactly once and produced a compl
 def build_intake_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
     return Agent(
         name="Intake Agent",
-        model=Groq(id=model_id),
+        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         tools=[lookup_dispute],
         instructions=INSTRUCTIONS,
         output_schema=IntakeSummary,

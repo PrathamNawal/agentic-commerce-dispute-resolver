@@ -26,7 +26,7 @@ Exit condition: you produce one complete Resolution and stop.
 def build_resolution_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
     return Agent(
         name="Resolution Agent",
-        model=Groq(id=model_id),
+        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         instructions=INSTRUCTIONS,
         output_schema=Resolution,
         markdown=False,

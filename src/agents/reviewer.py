@@ -28,7 +28,7 @@ Exit condition: you produce one complete ReviewScore and stop. You have no tools
 def build_reviewer_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
     return Agent(
         name="Reviewer Agent",
-        model=Groq(id=model_id),
+        model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         instructions=INSTRUCTIONS,
         output_schema=ReviewScore,
         markdown=False,
