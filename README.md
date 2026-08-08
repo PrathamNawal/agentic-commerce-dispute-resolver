@@ -7,7 +7,8 @@ may be at fault.
 
 Built as a scoped-down, zero-cost implementation of a production agent architecture. See
 [Architecture](#architecture) for what's built, what's stubbed, and what's deliberately skipped
-— that scoping decision is itself part of the project.
+— that scoping decision is itself part of the project. See [`ROADMAP.md`](ROADMAP.md) for
+what's next and what's designed but not yet built.
 
 ## Why this problem
 

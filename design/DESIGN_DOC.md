@@ -248,43 +248,8 @@ any UI work (Streamlit) is considered "done."
   should visually stand out as the one non-linear decision point in an otherwise
   straight-line chain.
 
-## Appendix: Roadmap — Extension Points
+## Roadmap
 
-Two changes are planned beyond v1: swapping the hardcoded policy handbook for a real
-vector-DB-backed RAG pipeline, and adding an actual human-in-the-loop review workflow. Both
-are designed for now so the swap later is additive, not a rework.
-
-### Policy grounding → vector DB (RAG)
-
-The Policy Agent never touches the handbook directly — it only calls
-`get_platform_policy(category: str) -> str` as a tool (`src/tools/policy_search.py`). That
-function signature is the frozen contract: category string in, policy-text string out.
-Swapping the dict-lookup body for a vector-DB retriever query is a change scoped entirely to
-that one function — the Policy Agent, its prompt, and everything downstream never changes.
-**Do not** let a future implementation change this function's signature or make it agent-aware
-(e.g. passing the whole `IntakeSummary` instead of a category string) without deliberately
-re-evaluating this contract.
-
-### Human-in-the-loop
-
-v1 ships the prep work, not the review UI:
-
-- **Schema split (done):** `Resolution.decision` is now always a substantive suggestion
-  (refund/replace/deny), separate from `Resolution.requires_human_review` (bool) and
-  `Resolution.escalation_reason`. Escalation no longer discards the agent's judgment — a human
-  reviewer always has something concrete to approve or override, never a blank flag.
-- **Escalation queue (done):** `src/tools/escalation_queue.py` appends every
-  `requires_human_review=True` case to `outputs/escalations.json` with `status: pending`. This
-  is the contract a future review UI reads from — `dispute_id`, `status`,
-  `suggested_decision`, `suggested_amount_usd`, `suggested_rationale`, `escalation_reason`,
-  `queued_at`, `human_action`. Keep this schema stable; add fields, don't rename them.
-- **Review UX (planned, not built):** a third Streamlit view (`Review queue`, alongside `Live
-  demo` and `Eval dashboard`) listing pending cases. Each opens to the same 4-stage pipeline
-  visual used in the live demo — no new mental model for the reviewer — with the agent's
-  suggestion front and center and three actions: Approve, Override (+ reason), Request more
-  info (state reserved, no mechanism yet).
-- **Feedback loop (planned):** record the human's action alongside the agent's original
-  suggestion in the same queue entry (`human_action`). This produces an agreement-rate metric
-  over time — how often a human just approves what the agent already suggested — which is the
-  actual evidence needed to justify ever lowering the $200 / low-confidence escalation
-  threshold. Escalation stops being a dead end and becomes a calibration signal.
+Near-term build/eval/ship work and post-v1 extension points (RAG-based policy grounding,
+human-in-the-loop review) live in [`ROADMAP.md`](../ROADMAP.md), not here — keeping status in
+one place instead of duplicated across documents.
