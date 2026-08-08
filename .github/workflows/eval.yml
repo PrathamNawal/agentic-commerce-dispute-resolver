@@ -1,0 +1,61 @@
+name: Eval regression check
+
+"on":
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+  workflow_dispatch: {}
+
+jobs:
+  eval:
+    runs-on: ubuntu-latest
+    env:
+      GROQ_API_KEY: ${{ secrets.GROQ_API_KEY }}
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Install uv
+        uses: astral-sh/setup-uv@v5
+        with:
+          enable-cache: true
+
+      - name: Install dependencies
+        run: uv sync
+
+      - name: Skip if no Groq key configured
+        if: env.GROQ_API_KEY == ''
+        run: |
+          echo "::warning::GROQ_API_KEY secret not set — skipping live eval run. Add it via"
+          echo "::warning::'gh secret set GROQ_API_KEY' or Settings > Secrets and variables > Actions."
+          exit 0
+
+      - name: Run eval harness
+        if: env.GROQ_API_KEY != ''
+        run: uv run evals/run_eval.py --out eval_result.json
+
+      - name: Check for accuracy regression
+        if: env.GROQ_API_KEY != ''
+        run: |
+          python3 -c "
+          import json, sys
+          data = json.load(open('eval_result.json'))
+          accuracy = data['decision_accuracy']
+          # Regression floor, not the 80% aspirational target from the design doc — LLM
+          # outputs have real run-to-run variance even at low temperature, and this gate
+          # exists to catch a genuine regression (a prompt/schema change that breaks
+          # something), not to fail CI on ordinary noise around the current ~50% baseline.
+          # Raise this floor deliberately as real fixes land — see ROADMAP.md.
+          floor = 0.30
+          print(f'Decision accuracy: {accuracy:.0%} (floor: {floor:.0%})')
+          if accuracy < floor:
+              print(f'::error::Decision accuracy {accuracy:.0%} is below the {floor:.0%} regression floor')
+              sys.exit(1)
+          "
+
+      - name: Upload eval results
+        if: always() && env.GROQ_API_KEY != ''
+        uses: actions/upload-artifact@v4
+        with:
+          name: eval-results
+          path: eval_result.json

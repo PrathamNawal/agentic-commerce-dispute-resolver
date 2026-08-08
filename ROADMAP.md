@@ -68,7 +68,14 @@ messages or chat history.
 
 - [ ] **Deploy the Streamlit demo to Render** (zero-cost stack) so it's a live link, not just
       a repo
-- [ ] **GitHub Actions CI** — run the eval suite on every push as a regression check
+- [x] **GitHub Actions CI** — [`.github/workflows/eval.yml`](.github/workflows/eval.yml) runs
+      the eval harness on every push/PR to `main`, gated on a 30% decision-accuracy regression
+      floor (deliberately below the ~50% baseline to absorb normal LLM run-to-run variance,
+      not the 80% aspirational target — raise it as real fixes land). Results upload as a
+      build artifact. **You still need to add the `GROQ_API_KEY` secret yourself** —
+      `gh secret set GROQ_API_KEY` or Settings > Secrets and variables > Actions — I can't do
+      this on your behalf (submitting an API key to a third-party service, even your own
+      GitHub, is something you need to do directly)
 - [ ] **Write the blog post / LinkedIn writeup** — the scoping-decision narrative (Level 2
       prompt chain, not Level 4 multi-agent; guardrails stubbed on purpose) is the actual
       interview-worthy material
