@@ -27,5 +27,9 @@ def build_intake_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
         tools=[lookup_dispute],
         instructions=INSTRUCTIONS,
         output_schema=IntakeSummary,
+        # Groq rejects JSON-mode response_format combined with tool calling in the same
+        # request. parser_model runs the tool-calling pass untooled/un-JSON-mode, then a
+        # separate call (no tools) parses the result into IntakeSummary.
+        parser_model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         markdown=False,
     )

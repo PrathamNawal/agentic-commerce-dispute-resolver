@@ -28,5 +28,8 @@ def build_policy_agent(model_id: str = "llama-3.3-70b-versatile") -> Agent:
         tools=[get_platform_policy, search_merchant_policy],
         instructions=INSTRUCTIONS,
         output_schema=PolicyFinding,
+        # See intake.py — Groq can't combine JSON-mode structured output with tool calling
+        # in one request; parser_model does the schema parse as a separate untooled call.
+        parser_model=Groq(id=model_id, temperature=0.15, max_tokens=1024, timeout=20),
         markdown=False,
     )

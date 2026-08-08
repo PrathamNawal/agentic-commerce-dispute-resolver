@@ -8,13 +8,15 @@ import argparse
 import sys
 
 from dotenv import load_dotenv
+
+load_dotenv()  # must run before importing src.* — src.observability reads Langfuse env vars at import time
+
 from rich.console import Console
 from rich.panel import Panel
 
 from src.orchestrator import resolve_dispute
 from src.tools.transaction_log import load_all_disputes
 
-load_dotenv()
 console = Console()
 
 

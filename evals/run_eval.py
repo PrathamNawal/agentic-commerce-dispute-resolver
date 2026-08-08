@@ -17,10 +17,10 @@ sys.path.insert(0, str(Path(__file__).resolve().parent.parent))
 
 from dotenv import load_dotenv
 
+load_dotenv()  # must run before importing src.* — src.observability reads Langfuse env vars at import time
+
 from src.orchestrator import resolve_dispute
 from src.tools.transaction_log import load_all_disputes
-
-load_dotenv()
 
 RESULTS_DIR = Path(__file__).resolve().parent / "results"
 

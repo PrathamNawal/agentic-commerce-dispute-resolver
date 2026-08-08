@@ -9,9 +9,20 @@ messages or chat history.
 
 ## Phase 3 — Build / Harden
 
-- [ ] **Live smoke test** — run `uv run main.py D-001` with a real Groq key to confirm the
-      agents produce sane structured output against a live model, not just static checks —
-      *blocked on: `GROQ_API_KEY` in `.env`*
+- [x] **Live smoke test** — ran end to end against real Groq/Langfuse keys. Surfaced and fixed
+      two real bugs, not just confirmed the happy path:
+      1. Groq rejects JSON-mode structured output combined with tool calling in one request.
+         The Intake and Policy agents (both tools + `output_schema`) now set `parser_model`
+         (a separate untooled Groq call that does the schema parse) — see `src/agents/intake.py`
+         and `src/agents/policy.py`.
+      2. `main.py`, `app.py`, and `evals/run_eval.py` all imported `src.orchestrator` (which
+         imports `src.observability`, which reads Langfuse env vars at *import time*) before
+         calling `load_dotenv()` — so tracing silently stayed disabled even with valid keys in
+         `.env`. Fixed by moving `load_dotenv()` before any `src.*` import in all three files.
+      One real eval finding along the way: D-009 (built to test the unclear-fault guardrail)
+      was misclassified as `agent_error` with high confidence instead of `unclear`, so it
+      auto-resolved instead of escalating. Left as-is rather than prompt-tuned — that's exactly
+      what the eval harness and Phase 4 work below are for.
 - [x] **Expand the dataset** beyond the 5 seed disputes — now 10, covering multi-item bundles,
       cross-border customs fees, a high-dollar guardrail test, an ambiguous-fault case, and a
       distinct subscription-cancellation failure
@@ -25,8 +36,8 @@ messages or chat history.
       clean error message instead of a raw traceback when the pipeline fails. Run with
       `uv run streamlit run app.py`. The Review queue view is read-only — approve/override
       actions are still the "planned" item under Human-in-the-loop below
-- [ ] **Set up a Langfuse account** and drop keys into `.env` so tracing actually activates
-      (currently no-ops silently) — *blocked on: Langfuse signup*
+- [x] **Set up a Langfuse account** and drop keys into `.env` — tracing confirmed active
+      (`is_tracing_enabled()` returns `True` after the dotenv-ordering fix above)
 
 ## Phase 4 — Eval (formal scorecard)
 

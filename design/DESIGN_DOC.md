@@ -179,7 +179,15 @@ conversation history or session state, which this problem doesn't need at all.
 | `get_platform_policy` | Yes | Returns the platform's own hardcoded dispute-policy text for a fault category |
 | `search_merchant_policy` | Yes | Live DuckDuckGo web search, used by the Policy Agent to ground ambiguous cases in real-world policy language |
 | Payment/refund execution API | No | v1 only *decides* and *drafts*; it never actually moves money or triggers a real refund — see Section 5 |
-| Database write (audit log persistence) | Partial | Langfuse tracing covers full-run audit; `escalation_queue.py` additionally persists escalated-case decisions to `outputs/escalations.json` (see roadmap appendix) — auto-resolved cases still have no separate DB write beyond tracing |
+| Database write (audit log persistence) | Partial | Langfuse tracing covers full-run audit; `escalation_queue.py` additionally persists escalated-case decisions to `outputs/escalations.json` (see [`ROADMAP.md`](../ROADMAP.md)) — auto-resolved cases still have no separate DB write beyond tracing |
+
+**Groq-specific gotcha:** Groq's API rejects a request that combines JSON-mode structured
+output (`output_schema`) with tool calling — `{"error": "json mode cannot be combined with
+tool/function calling"}`. Any agent with both tools and an `output_schema` (Intake, Policy)
+needs `parser_model` set (a separate Groq instance with no tools) so Agno runs the tool-calling
+pass untooled, then parses the result into the schema as a second, separate call. Resolution
+and Reviewer don't need this since they have no tools. This only surfaced once a live Groq key
+was actually used — see `ROADMAP.md`'s live smoke test entry.
 
 **Upgrade path:** the highest-value next tool is a real refund/replace execution API — wiring
 the Resolution Agent's decision to an actual action (rather than a drafted-but-unexecuted

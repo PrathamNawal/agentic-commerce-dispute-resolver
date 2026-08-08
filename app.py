@@ -9,15 +9,16 @@ ROADMAP.md). main.py remains the scripting/CLI entrypoint the eval harness uses.
 import json
 from pathlib import Path
 
+from dotenv import load_dotenv
+
+load_dotenv()  # must run before importing src.* — src.observability reads Langfuse env vars at import time
+
 import pandas as pd
 import streamlit as st
-from dotenv import load_dotenv
 
 from src.orchestrator import resolve_dispute_stream
 from src.tools.escalation_queue import load_queue
 from src.tools.transaction_log import load_all_disputes
-
-load_dotenv()
 
 st.set_page_config(page_title="Agentic Commerce Dispute Resolver", layout="centered")
 
