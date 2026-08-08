@@ -1,0 +1,93 @@
+[
+  {
+    "id": "D-001",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Everline Electronics",
+    "transaction": {
+      "item": "Wireless earbuds (Model X200)",
+      "amount_usd": 89.99,
+      "purchased_at": "2026-08-01T14:22:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'buy wireless earbuds under $100 with good reviews'",
+      "Agent searched merchant catalog, selected X200 (4.6 stars, $89.99)",
+      "Agent completed checkout autonomously via ACP, no user confirmation step triggered (below $100 auto-approve threshold)"
+    ],
+    "dispute_reason": "Buyer received item but says color (black) does not match what listing implied (product photo showed white variant as default)",
+    "gold_resolution": "replace",
+    "gold_rationale": "Listing ambiguity is a merchant-side error, not buyer or agent error. Replace with correct variant at no cost; no policy violation by the purchasing agent."
+  },
+  {
+    "id": "D-002",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Everline Electronics",
+    "transaction": {
+      "item": "Wireless earbuds (Model X200)",
+      "amount_usd": 89.99,
+      "purchased_at": "2026-08-01T09:10:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'buy wireless earbuds under $100 with good reviews'",
+      "Agent purchased same item twice within 40 seconds due to a retry-on-timeout bug in the agent's checkout tool call",
+      "No duplicate-order confirmation was surfaced to user"
+    ],
+    "dispute_reason": "Buyer was charged twice for a single requested purchase",
+    "gold_resolution": "refund",
+    "gold_rationale": "Duplicate charge caused by a purchasing-agent tool-call bug, not a user decision. Full refund of the duplicate transaction; no restocking fee applies since merchant is not at fault but buyer should not bear agent error cost."
+  },
+  {
+    "id": "D-003",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Artisan Home Goods",
+    "transaction": {
+      "item": "Hand-thrown ceramic vase",
+      "amount_usd": 145.00,
+      "purchased_at": "2026-08-03T11:05:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'find a housewarming gift around $150, something unique, ship to my sister'",
+      "Agent selected vase from a small-batch artisan seller, final-sale item per merchant policy (clearly marked in listing)",
+      "Agent completed purchase; final-sale terms were included in the tool's structured listing data but not surfaced to the user before purchase"
+    ],
+    "dispute_reason": "Buyer wants to return the item because the sister already owns a similar vase; merchant's listed policy is final-sale, no returns",
+    "gold_resolution": "escalate",
+    "gold_rationale": "Merchant policy is unambiguous and was available to the agent pre-purchase (procedural compliance), but the agent failed to surface a material term (final-sale) before an irreversible action. This is a borderline case involving agent disclosure failure vs. legitimate merchant policy — route to human review rather than auto-deciding either way."
+  },
+  {
+    "id": "D-004",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Pantry Direct",
+    "transaction": {
+      "item": "Monthly protein powder subscription",
+      "amount_usd": 42.50,
+      "purchased_at": "2026-07-15T08:00:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'set up a recurring order for my usual protein powder, cancel if price goes up more than 10%'",
+      "Agent set up subscription per user's stated price-increase cancellation rule",
+      "Merchant raised price by 18% for the August billing cycle",
+      "Agent did not detect the price change and allowed the renewal to proceed"
+    ],
+    "dispute_reason": "Buyer was charged at a price 18% above their stated cancellation threshold; agent failed to monitor and cancel per explicit instruction",
+    "gold_resolution": "refund",
+    "gold_rationale": "Clear violation of an explicit user-set policy guardrail by the purchasing agent. Refund the price difference (or full renewal amount per platform's standing policy) and flag the agent's price-monitoring tool as defective."
+  },
+  {
+    "id": "D-005",
+    "buyer_agent": "shopping-copilot-v2",
+    "merchant": "Trailhead Outdoors",
+    "transaction": {
+      "item": "Hiking backpack, 40L",
+      "amount_usd": 129.00,
+      "purchased_at": "2026-08-05T16:40:00Z"
+    },
+    "agent_action_log": [
+      "User instructed: 'buy me a 40L hiking backpack, nothing over $150'",
+      "Agent selected backpack within budget from a verified merchant",
+      "User received the correct item as described, no error in listing or agent behavior"
+    ],
+    "dispute_reason": "Buyer simply changed their mind and no longer wants the backpack; requests refund citing standard 30-day return window",
+    "gold_resolution": "refund",
+    "gold_rationale": "No agent or merchant error occurred. This is a standard buyer's-remorse return within the merchant's stated 30-day window — process under normal return policy, unrelated to any agentic-purchase failure mode."
+  }
+]
