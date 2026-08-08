@@ -69,6 +69,9 @@ uv run main.py --all
 
 # Run the eval harness against the labeled gold set
 uv run evals/run_eval.py
+
+# Launch the Streamlit demo (Live demo / Eval dashboard / Review queue)
+uv run streamlit run app.py
 ```
 
 ## Eval harness
@@ -87,5 +90,6 @@ improvement — the actual point of building this.
 
 ## Stack
 
-Agno (agent framework) · Groq (inference) · Langfuse (tracing) · uv (packaging) — all free-tier,
+Agno (agent framework) · Groq (inference) · Langfuse (tracing) · Streamlit (demo UI) · uv
+(packaging) — all free-tier,
 zero marginal cost.

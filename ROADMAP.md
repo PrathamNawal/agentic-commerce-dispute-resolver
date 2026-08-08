@@ -18,9 +18,13 @@ messages or chat history.
 - [x] **Second escalation guardrail dimension** — the Resolution Agent now also flags
       `requires_human_review` when the intake `fault_hypothesis` is `"unclear"`, regardless of
       amount or policy confidence (see design doc's Top 3 Risks)
-- [ ] **Streamlit UI** — build the three-view app (`Live demo`, `Eval dashboard`, `Review
-      queue`) against the approved UX: plain-language problem statement up top, numbered
-      step-by-step pipeline reveal, one obvious "Resolve this dispute" action
+- [x] **Streamlit UI** — `app.py` implements the three-view app (`Live demo`, `Eval
+      dashboard`, `Review queue`) against the approved UX: plain-language problem statement up
+      top, numbered step-by-step pipeline reveal (via the new `resolve_dispute_stream()`
+      generator in `src/orchestrator.py`), one obvious "Resolve this dispute" action, and a
+      clean error message instead of a raw traceback when the pipeline fails. Run with
+      `uv run streamlit run app.py`. The Review queue view is read-only — approve/override
+      actions are still the "planned" item under Human-in-the-loop below
 - [ ] **Set up a Langfuse account** and drop keys into `.env` so tracing actually activates
       (currently no-ops silently) — *blocked on: Langfuse signup*
 
@@ -77,11 +81,13 @@ deliberately re-evaluating this contract.
       Contract a future review UI reads from: `dispute_id`, `status`, `suggested_decision`,
       `suggested_amount_usd`, `suggested_rationale`, `escalation_reason`, `queued_at`,
       `human_action`. Keep this schema stable; add fields, don't rename them.
-- [ ] **Review UX** — a third Streamlit view (`Review queue`, alongside `Live demo` and `Eval
-      dashboard`) listing pending cases. Each opens to the same 4-stage pipeline visual used
-      in the live demo — no new mental model for the reviewer — with the agent's suggestion
-      front and center and three actions: Approve, Override (+ reason), Request more info
-      (state reserved, no mechanism yet).
+- [x] **Review UX — listing view** — the `Review queue` tab in `app.py` lists pending cases
+      from `outputs/escalations.json` (dispute ID, status, suggested decision, escalation
+      reason). Read-only.
+- [ ] **Review UX — actions** — Approve, Override (+ reason), Request more info (state
+      reserved, no mechanism yet) buttons that write back to the queue entry's `human_action`
+      field. Should reuse the same 4-stage pipeline visual from the live demo so there's no
+      new mental model for the reviewer.
 - [ ] **Feedback loop** — record the human's action alongside the agent's original suggestion
       in the same queue entry (`human_action`). This produces an agreement-rate metric over
       time — how often a human just approves what the agent already suggested — which is the
