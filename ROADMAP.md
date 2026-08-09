@@ -104,8 +104,14 @@ messages or chat history.
 
 ## Phase 5 — Ship / Showcase
 
-- [ ] **Deploy the Streamlit demo to Render** (zero-cost stack) so it's a live link, not just
-      a repo
+- [ ] **Deploy the Streamlit demo to Render** — [`render.yaml`](render.yaml) Blueprint is
+      ready (free tier, `uv sync` build, env vars set to `sync: false` so keys go directly
+      into Render's dashboard, never committed). **The actual connection is a step only you
+      can do**: go to Render's dashboard, "New > Blueprint," connect this GitHub repo — that's
+      a one-time OAuth authorization that can't be scripted headlessly — then paste
+      `GROQ_API_KEY` / `OPENROUTER_API_KEY` / Langfuse keys into the service's environment
+      variables. Free tier spins down after 15 min idle (cold start ~30-60s) — expected, not
+      a bug if the first load after a while feels slow
 - [x] **GitHub Actions CI** — [`.github/workflows/eval.yml`](.github/workflows/eval.yml) runs
       the eval harness on every push/PR to `main`, gated on a 30% decision-accuracy regression
       floor (deliberately below the ~50% baseline to absorb normal LLM run-to-run variance,
@@ -117,10 +123,13 @@ messages or chat history.
 - [ ] **Write the blog post / LinkedIn writeup** — the scoping-decision narrative (Level 2
       prompt chain, not Level 4 multi-agent; guardrails stubbed on purpose) is the actual
       interview-worthy material
-- [ ] **Distill an interview STAR story** — problem, your role, the architecture decision, the
-      eval-driven improvement, the result
+- [x] **Distill an interview STAR story** — [`STAR_STORY.md`](STAR_STORY.md): the core project
+      pitch plus three sub-stories (the Reviewer Agent bug, the OpenRouter fallback tradeoff,
+      the eval-honesty philosophy) — every number pulled from real commits and the scorecard,
+      not reconstructed after the fact
 - [ ] **Cross-link from Agentic PM** — your one project with real signal; pointing traffic
-      between the two compounds both
+      between the two compounds both. *Needs the Agentic PM project's location/repo to add
+      the actual link — not something I can do without knowing where it lives*
 
 ## Post-v1 Extension Points
 
