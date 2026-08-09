@@ -131,12 +131,22 @@ messages or chat history.
 
 - [x] **Deploy the Streamlit demo to Render** — live at
       [agentic-commerce-dispute-resolver.onrender.com](https://agentic-commerce-dispute-resolver.onrender.com/).
-      Blueprint connected, env vars set, service builds and serves correctly. **Functional
-      verification pending**: the first live resolve attempt hit the same exhausted Groq +
-      OpenRouter daily quotas as the rest of this session — and the app handled it exactly as
-      designed, showing the clean `st.error` message (see `app.py`) instead of crashing, which
-      is itself a real confirmation the error-handling work holds up in production, not just
-      locally. Try resolving a dispute again once quota resets to confirm the full live path.
+      Blueprint connected, env vars set, service builds and serves correctly.
+      **RCA on the first failure**: the error showed the fallback chain only tried
+      `(groq, openrouter)` — `GOOGLE_API_KEY` had never actually been entered in Render's
+      dashboard, even though `render.yaml` declared the slot. Deeper cause: local dev and the
+      deployed app share the *same* `GROQ_API_KEY`/`OPENROUTER_API_KEY` values, so this
+      session's heavy local testing had already spent both providers' daily quota before a
+      real visitor ever hit the site — a credential-architecture problem, not a code bug.
+      **After adding `GOOGLE_API_KEY` to Render**: re-tested live — Gemini now appears in the
+      chain and actually carried Intake + Policy successfully (real progress over total
+      failure), then hit Gemini's 5-req/minute cap on Resolution, since with Groq/OpenRouter
+      both still exhausted, every call in the pipeline routed through Gemini's tight
+      per-minute ceiling. All three providers were simultaneously maxed at test time — expect
+      this to clear once Groq/OpenRouter's daily quotas reset, at which point most calls
+      succeed on Groq directly and rarely touch Gemini's limit at all. **Still open**:
+      separate API keys for local dev vs. Render production, so local testing stops
+      cannibalizing the live demo's daily budget — the actual fix for this recurring all night.
       Free tier spins down after 15 min idle (cold start ~30-60s) — expected, not a bug
 - [x] **Auto-deploy on push — confirmed live, not just configured.** `render.yaml` sets
       `autoDeploy: true` explicitly. Checked the service's Events log directly: every commit
