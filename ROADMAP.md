@@ -53,17 +53,19 @@ messages or chat history.
       actions are still the "planned" item under Human-in-the-loop below
 - [x] **Set up a Langfuse account** and drop keys into `.env` — tracing confirmed active
       (`is_tracing_enabled()` returns `True` after the dotenv-ordering fix above)
-- [ ] **Both free-tier daily quotas exhausted in one session** — after Groq's 100k TPD cap
-      maxed out, OpenRouter's own free-tier cap (50 requests/day — documented in the zero-cost
-      toolkit reference, now confirmed the hard way) also maxed out attempting the full
-      10-dispute × 4-stage eval re-run, since with Groq down every single call routed through
-      OpenRouter instead. Both reset on a fixed daily boundary (OpenRouter: confirmed midnight
-      UTC via its `X-RateLimit-Reset` header), not a rolling window — retrying sooner just
-      wastes calls. **Re-run the full eval once one of the two resets** — this is what's
-      blocking the pending cells in `evals/EVAL_SCORECARD.md` and the before/after comparison
-      below. Longer-term: a 10-dispute eval run is expensive relative to a 50/day free budget;
-      worth considering a smaller "smoke" eval subset (3-4 disputes) for routine iteration and
-      reserving the full 10-dispute run for less frequent checkpoints
+- [x] **Both free-tier daily quotas exhausted — confirmed as a recurring pattern, not a
+      one-off** — happened on two separate days now. After Groq's 100k TPD cap maxes out,
+      OpenRouter's own free-tier cap (50 requests/day — documented in the zero-cost toolkit
+      reference, now confirmed the hard way twice) also maxes out on a single full-dataset
+      eval re-run, since with Groq intermittently failing, most/all calls route through
+      OpenRouter instead of just the overflow. Both reset on a fixed daily boundary
+      (OpenRouter: confirmed midnight UTC via its `X-RateLimit-Reset` header), not a rolling
+      window — retrying sooner just wastes calls. This is a real operating constraint of the
+      zero-cost stack for an agent this token-hungry, not a bug to fix — see Phase 4's
+      before/after item for the specific thing it's currently blocking. Longer-term: a
+      10-dispute eval run is expensive relative to a 50/day free budget; worth considering a
+      smaller "smoke" eval subset (3-4 disputes) for routine iteration and reserving the full
+      10-dispute run for less frequent checkpoints
 
 ## Phase 4 — Eval (formal scorecard)
 
@@ -78,17 +80,27 @@ messages or chat history.
       seeing the answer). Fixed via a new `lookup_dispute_with_gold()`, used only by the
       Reviewer/eval path. Named as a risk in the design doc before it was ever observed —
       worth noting that predicting a risk and then actually catching it are different things
-- [x] **Run `/anthropic-skills:eval-scorecard`** — [`evals/EVAL_SCORECARD.md`](evals/EVAL_SCORECARD.md).
-      Scored 2 of 5 test cases fully (real captured output); the other 3 have real
-      decision-correctness data but pending qualitative scoring — Groq's free-tier daily
-      token cap (100k TPD) was exhausted mid-session running the full eval + this scorecard's
-      data-gathering. **Re-run once quota resets** to fill in the pending cells and re-verify
-      the Reviewer Agent fix live (see EVAL_SCORECARD.md Section 4/5 for what's pending)
-- [ ] **Before/after eval comparison** — now has a real baseline to diff against (50%
-      decision accuracy, v1.0 in the scorecard's prompt iteration log). Next: address the
-      fault-hypothesis misclassification pattern (the biggest driver of the failures) and
-      re-run to get a genuine before/after — this diff is the actual "I built evals to
-      upskill the agent" artifact, and it doesn't exist yet, only the "before" half does
+- [x] **Run `/anthropic-skills:eval-scorecard`** — [`evals/EVAL_SCORECARD.md`](evals/EVAL_SCORECARD.md)
+      now has a fully-scored v1.0 baseline: **60% decision accuracy (6/10), 74.0 avg reviewer
+      score, 66.6/100 composite rubric score**, all 5 test cases scored (no pending cells) —
+      real data across the board, with fault-hypothesis defensibility explicitly labeled as
+      inferred from observable signals rather than fabricated. Also caught a *new*, narrower
+      Reviewer Agent finding beyond the original bug: 90% reviewer accuracy (9/10) against
+      real ground truth, with one genuine leniency case (not a data-plumbing bug this time —
+      see scorecard Category 4)
+- [x] **Fault-hypothesis misclassification fix (v1.1)** — rewrote the Intake Agent's prompt
+      (`src/agents/intake.py`) to require explicit-fact-only reasoning before choosing a
+      non-`unclear` fault category, with concrete criteria for when `unclear` is the right
+      call. Directly targets the biggest driver of v1.0's failures (TC-04/D-007, TC-05/D-009
+      in the scorecard). Code is committed; **not yet verified live**
+- [ ] **Before/after eval comparison** — the "before" half is now fully real and complete
+      (v1.0: 66.6/100 composite, see scorecard). The "after" run (v1.1, with the fix above)
+      was attempted immediately and **hit both Groq's and OpenRouter's daily quotas in the
+      same session** — a single 10-dispute run apparently consumes most of a fresh daily
+      budget on both providers when Groq is intermittently failing throughout. **Re-run
+      `uv run evals/run_eval.py --out evals/results/eval_v1.1_after_fix.json` once quota
+      allows**, then diff against v1.0 in the scorecard's Section 5. This is the one piece of
+      Phase 4 still genuinely incomplete — not for lack of trying, for lack of quota
 
 ## Phase 5 — Ship / Showcase
 

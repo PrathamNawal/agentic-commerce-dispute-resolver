@@ -1,0 +1,23 @@
+services:
+  - type: web
+    name: agentic-commerce-dispute-resolver
+    runtime: python
+    plan: free
+    buildCommand: pip install uv && uv sync
+    startCommand: uv run streamlit run app.py --server.port $PORT --server.address 0.0.0.0
+    envVars:
+      # sync: false — Render will prompt for these in its dashboard rather than pulling them
+      # from anywhere; you set the actual values there after connecting the repo, the same
+      # way they're only ever in your local .env (gitignored) and never committed.
+      - key: GROQ_API_KEY
+        sync: false
+      - key: OPENROUTER_API_KEY
+        sync: false
+      - key: OPENROUTER_FALLBACK_MODEL
+        sync: false
+      - key: LANGFUSE_PUBLIC_KEY
+        sync: false
+      - key: LANGFUSE_SECRET_KEY
+        sync: false
+      - key: LANGFUSE_BASE_URL
+        sync: false

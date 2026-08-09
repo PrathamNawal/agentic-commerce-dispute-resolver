@@ -50,6 +50,14 @@ def run_eval(model_id: str) -> dict:
                 "cites_policy": result.review.cites_policy,
                 "tone_appropriate": result.review.tone_appropriate,
             },
+            # Full reasoning text — needed to actually score qualitative rubric criteria
+            # (see evals/EVAL_SCORECARD.md), not just aggregate pass/fail.
+            "fault_hypothesis": result.intake.fault_hypothesis,
+            "requires_human_review": result.resolution.requires_human_review,
+            "escalation_reason": result.resolution.escalation_reason,
+            "rationale": result.resolution.rationale,
+            "buyer_response_draft": result.resolution.buyer_response_draft,
+            "reviewer_notes": result.review.notes,
         })
 
     n = len(disputes)
