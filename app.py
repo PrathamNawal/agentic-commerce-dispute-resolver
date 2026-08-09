@@ -17,7 +17,7 @@ import pandas as pd
 import streamlit as st
 
 from src.orchestrator import resolve_dispute_stream
-from src.tools.escalation_queue import load_queue
+from src.tools.escalation_queue import load_queue, update_human_action
 from src.tools.transaction_log import load_all_disputes
 
 st.set_page_config(page_title="Agentic Commerce Dispute Resolver", layout="centered")
@@ -130,22 +130,57 @@ def eval_dashboard_view() -> None:
 
 def review_queue_view() -> None:
     st.markdown(
-        "Cases the guardrail flagged for human review. Approve/override actions aren't built "
-        "yet — see ROADMAP.md's human-in-the-loop section — this is a read-only view of the "
-        "queue `escalation_queue.py` writes to."
+        "Cases the guardrail flagged for human review. Approve the agent's suggestion, "
+        "override it with your own decision, or flag that more information is needed."
     )
     queue = load_queue()
     if not queue:
         st.info("Queue is empty. Resolve a dispute that escalates (e.g. \"Conflicting instructions\") to populate it.")
         return
 
-    for item in reversed(queue):
+    for idx, item in enumerate(reversed(queue)):
         amt = f" (${item['suggested_amount_usd']:.2f})" if item.get("suggested_amount_usd") else ""
         with st.container(border=True):
             st.markdown(f"**{item['dispute_id']}** — status: `{item['status']}`")
             st.caption(f"Escalated because: {item['escalation_reason']}")
             st.write(f"Suggested decision: **{item['suggested_decision']}**{amt}")
             st.caption(item["suggested_rationale"])
+
+            if item["status"] != "pending":
+                ha = item["human_action"]
+                summary = f"Reviewed — **{ha['action'].replace('_', ' ')}**"
+                if ha.get("override_decision"):
+                    summary += f" → **{ha['override_decision']}**"
+                st.success(summary)
+                if ha.get("override_reason"):
+                    st.caption(ha["override_reason"])
+                continue
+
+            col1, col2, col3 = st.columns(3)
+            if col1.button("Approve", key=f"approve_{idx}", use_container_width=True):
+                update_human_action(item["dispute_id"], item["queued_at"], "approve")
+                st.rerun()
+
+            with col2.popover("Override", use_container_width=True):
+                new_decision = st.selectbox(
+                    "Actual decision", ["refund", "replace", "deny"], key=f"override_decision_{idx}"
+                )
+                override_reason = st.text_area("Why", key=f"override_reason_{idx}")
+                if st.button("Submit override", key=f"submit_override_{idx}"):
+                    update_human_action(
+                        item["dispute_id"], item["queued_at"], "override",
+                        override_decision=new_decision, override_reason=override_reason,
+                    )
+                    st.rerun()
+
+            with col3.popover("Request more info", use_container_width=True):
+                info_note = st.text_area("What's needed?", key=f"info_note_{idx}")
+                if st.button("Submit request", key=f"submit_info_{idx}"):
+                    update_human_action(
+                        item["dispute_id"], item["queued_at"], "request_more_info",
+                        override_reason=info_note,
+                    )
+                    st.rerun()
 
 
 st.title("Agentic commerce dispute resolver")

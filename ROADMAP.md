@@ -153,9 +153,6 @@ messages or chat history.
       pitch plus three sub-stories (the Reviewer Agent bug, the OpenRouter fallback tradeoff,
       the eval-honesty philosophy) — every number pulled from real commits and the scorecard,
       not reconstructed after the fact
-- [ ] **Cross-link from Agentic PM** — your one project with real signal; pointing traffic
-      between the two compounds both. *Needs the Agentic PM project's location/repo to add
-      the actual link — not something I can do without knowing where it lives*
 
 ## Post-v1 Extension Points
 
@@ -189,12 +186,17 @@ deliberately re-evaluating this contract.
 - [x] **Review UX — listing view** — the `Review queue` tab in `app.py` lists pending cases
       from `outputs/escalations.json` (dispute ID, status, suggested decision, escalation
       reason). Read-only.
-- [ ] **Review UX — actions** — Approve, Override (+ reason), Request more info (state
-      reserved, no mechanism yet) buttons that write back to the queue entry's `human_action`
-      field. Should reuse the same 4-stage pipeline visual from the live demo so there's no
-      new mental model for the reviewer.
-- [ ] **Feedback loop** — record the human's action alongside the agent's original suggestion
-      in the same queue entry (`human_action`). This produces an agreement-rate metric over
-      time — how often a human just approves what the agent already suggested — which is the
-      actual evidence needed to justify ever lowering the $200 / low-confidence escalation
-      threshold. Escalation stops being a dead end and becomes a calibration signal.
+- [x] **Review UX — actions** — Approve, Override (+ reason), Request more info buttons in the
+      `Review queue` tab, writing back to the queue entry's `human_action` field via
+      `update_human_action()` in `src/tools/escalation_queue.py`. Verified live in-browser:
+      all three actions tested end-to-end (Approve, Override → correct decision + reason,
+      Request more info → note captured), status updates correctly (`approved` /
+      `overridden` / `info_requested`), and acted-on items switch to a read-only summary.
+      Matched on `(dispute_id, queued_at)` rather than `dispute_id` alone, since the same
+      dispute can be queued more than once across runs.
+- [~] **Feedback loop** — the write-back mechanism above *is* this: every human action is now
+      recorded alongside the agent's original suggestion in the same queue entry. What's still
+      missing is the aggregate view — an agreement-rate metric (how often a human just
+      approves what the agent already suggested) computed across the queue over time. That's
+      the actual evidence needed to justify ever lowering the $200 / low-confidence escalation
+      threshold, and it doesn't exist yet — the data to compute it from does now.

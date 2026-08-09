@@ -1,16 +1,25 @@
 """Durable queue for disputes that need human review.
 
-No review UI exists yet (that's the human-in-the-loop roadmap item in DESIGN_DOC.md) — this
-is the prep step so escalated cases land somewhere inspectable instead of being printed once
-and discarded. A future review UI reads this file directly; the schema here is the contract
-it depends on.
+Escalated cases land here so they're inspectable instead of being printed once and discarded.
+app.py's Review queue tab reads and writes this file; the schema here is the contract it
+depends on. update_human_action() is the feedback-loop write-back: it records what a human
+actually decided against the agent's original suggestion, which is what would eventually let
+you measure agreement rate and justify tuning the escalation threshold (see ROADMAP.md) — that
+aggregate metric itself isn't built yet, only the data collection this makes possible.
 """
 
 import json
 from datetime import datetime, timezone
 from pathlib import Path
+from typing import Optional
 
 QUEUE_PATH = Path(__file__).resolve().parent.parent.parent / "outputs" / "escalations.json"
+
+ACTION_TO_STATUS = {
+    "approve": "approved",
+    "override": "overridden",
+    "request_more_info": "info_requested",
+}
 
 
 def _load() -> list[dict]:
@@ -43,3 +52,33 @@ def queue_for_review(
 
 def load_queue() -> list[dict]:
     return _load()
+
+
+def update_human_action(
+    dispute_id: str,
+    queued_at: str,
+    action: str,
+    override_decision: Optional[str] = None,
+    override_reason: Optional[str] = None,
+) -> None:
+    """Records a human reviewer's action against a queued escalation. Matched on
+    (dispute_id, queued_at) rather than dispute_id alone, since the same dispute could be
+    queued more than once across separate runs.
+
+    action must be one of "approve", "override", "request_more_info".
+    """
+    if action not in ACTION_TO_STATUS:
+        raise ValueError(f"unknown action: {action}")
+
+    queue = _load()
+    for item in queue:
+        if item["dispute_id"] == dispute_id and item["queued_at"] == queued_at:
+            item["status"] = ACTION_TO_STATUS[action]
+            item["human_action"] = {
+                "action": action,
+                "override_decision": override_decision,
+                "override_reason": override_reason,
+                "acted_at": datetime.now(timezone.utc).isoformat(),
+            }
+            break
+    QUEUE_PATH.write_text(json.dumps(queue, indent=2))
