@@ -17,7 +17,7 @@ import pandas as pd
 import streamlit as st
 
 from src.orchestrator import resolve_dispute_stream
-from src.tools.escalation_queue import load_queue, update_human_action
+from src.tools.escalation_queue import compute_agreement_stats, load_queue, update_human_action
 from src.tools.transaction_log import load_all_disputes
 
 st.set_page_config(page_title="Agentic Commerce Dispute Resolver", layout="centered")
@@ -137,6 +137,19 @@ def review_queue_view() -> None:
     if not queue:
         st.info("Queue is empty. Resolve a dispute that escalates (e.g. \"Conflicting instructions\") to populate it.")
         return
+
+    stats = compute_agreement_stats()
+    col1, col2, col3 = st.columns(3)
+    col1.metric("Agreement rate", f"{stats['agreement_rate']:.0%}" if stats["agreement_rate"] is not None else "—")
+    col2.metric("Reviewed", f"{stats['decided']} / {stats['total']}")
+    col3.metric("Pending", stats["pending"])
+    st.caption(
+        "Agreement rate = approved ÷ (approved + overridden) — how often a human just signs "
+        "off on what the agent already suggested. Excludes pending cases and \"request more "
+        "info\" (neither is a verdict). This is the evidence needed before ever loosening the "
+        "$200 / low-confidence escalation guardrail — not a target to chase for its own sake."
+    )
+    st.divider()
 
     for idx, item in enumerate(reversed(queue)):
         amt = f" (${item['suggested_amount_usd']:.2f})" if item.get("suggested_amount_usd") else ""

@@ -194,9 +194,12 @@ deliberately re-evaluating this contract.
       `overridden` / `info_requested`), and acted-on items switch to a read-only summary.
       Matched on `(dispute_id, queued_at)` rather than `dispute_id` alone, since the same
       dispute can be queued more than once across runs.
-- [~] **Feedback loop** — the write-back mechanism above *is* this: every human action is now
-      recorded alongside the agent's original suggestion in the same queue entry. What's still
-      missing is the aggregate view — an agreement-rate metric (how often a human just
-      approves what the agent already suggested) computed across the queue over time. That's
-      the actual evidence needed to justify ever lowering the $200 / low-confidence escalation
-      threshold, and it doesn't exist yet — the data to compute it from does now.
+- [x] **Feedback loop** — every human action is recorded alongside the agent's original
+      suggestion in the same queue entry (`update_human_action()`), and
+      `compute_agreement_stats()` turns that into the aggregate signal the loop exists for:
+      agreement rate = approved ÷ (approved + overridden), excluding pending cases and
+      "request more info" since neither is a verdict. Surfaced at the top of the `Review
+      queue` tab (Agreement rate / Reviewed / Pending metrics). Verified live: 1 approve + 2
+      overrides computed correctly as 33%. This is the actual evidence needed before ever
+      loosening the $200 / low-confidence escalation guardrail — not a target to chase for
+      its own sake, a measurement to earn the right to change the threshold.

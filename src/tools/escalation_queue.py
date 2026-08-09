@@ -3,9 +3,11 @@
 Escalated cases land here so they're inspectable instead of being printed once and discarded.
 app.py's Review queue tab reads and writes this file; the schema here is the contract it
 depends on. update_human_action() is the feedback-loop write-back: it records what a human
-actually decided against the agent's original suggestion, which is what would eventually let
-you measure agreement rate and justify tuning the escalation threshold (see ROADMAP.md) — that
-aggregate metric itself isn't built yet, only the data collection this makes possible.
+actually decided against the agent's original suggestion. compute_agreement_stats() turns
+that into the aggregate signal the loop exists for — how often a human just approves what the
+agent already suggested — which is the evidence needed to ever justify lowering the $200 /
+low-confidence escalation threshold. "Approve" counts as agreement, "Override" as disagreement;
+"Request more info" and still-pending cases are excluded from the rate (neither is a verdict).
 """
 
 import json
@@ -82,3 +84,28 @@ def update_human_action(
             }
             break
     QUEUE_PATH.write_text(json.dumps(queue, indent=2))
+
+
+def compute_agreement_stats() -> dict:
+    """Aggregate agreement rate across all reviewed queue entries.
+
+    "approved" = human agreed with the agent's suggestion. "overridden" = human disagreed.
+    "info_requested" and "pending" are excluded from agreement_rate's denominator — neither is
+    a verdict on whether the agent was right.
+    """
+    queue = _load()
+    approved = sum(1 for i in queue if i["status"] == "approved")
+    overridden = sum(1 for i in queue if i["status"] == "overridden")
+    info_requested = sum(1 for i in queue if i["status"] == "info_requested")
+    pending = sum(1 for i in queue if i["status"] == "pending")
+    decided = approved + overridden
+
+    return {
+        "total": len(queue),
+        "pending": pending,
+        "approved": approved,
+        "overridden": overridden,
+        "info_requested": info_requested,
+        "decided": decided,
+        "agreement_rate": (approved / decided) if decided else None,
+    }
