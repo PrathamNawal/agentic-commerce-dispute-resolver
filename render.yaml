@@ -3,6 +3,9 @@ services:
     name: agentic-commerce-dispute-resolver
     runtime: python
     plan: free
+    autoDeploy: true  # explicit, not just relying on Render's default — deploy on every push
+                       # to the connected branch (main). See ROADMAP.md for the two dashboard
+                       # toggles this depends on that I can't set myself.
     buildCommand: pip install uv && uv sync
     startCommand: uv run streamlit run app.py --server.port $PORT --server.address 0.0.0.0
     envVars:
