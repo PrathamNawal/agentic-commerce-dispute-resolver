@@ -4,7 +4,7 @@ produces a neutral fault hypothesis before anyone argues a resolution.
 
 from agno.agent import Agent
 
-from src.model_config import build_fallback_config, build_model, build_openrouter_model
+from src.model_config import build_model, build_provider_model
 from src.schemas import IntakeSummary
 from src.tools.transaction_log import lookup_dispute
 
@@ -35,15 +35,22 @@ Exit condition: you have called lookup_dispute exactly once and produced a compl
 """
 
 
-def build_intake_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
-    if provider == "openrouter":
-        model, parser_model, fallback_config = build_openrouter_model(), build_openrouter_model(), None
+def build_intake_agent(
+    model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq", use_cache: bool = True
+) -> Agent:
+    if provider == "groq":
+        model = build_model(model_id, use_cache=use_cache)
+        parser_model = build_model(model_id, use_cache=use_cache)
     else:
-        model, parser_model, fallback_config = build_model(model_id), build_model(model_id), build_fallback_config()
+        model = build_provider_model(provider, use_cache=use_cache)
+        parser_model = build_provider_model(provider, use_cache=use_cache)
+    # No fallback_config here — orchestrator._run_stage() already walks the full provider
+    # chain explicitly and correctly (including the parser_model gap Agno's fallback_config
+    # can't cover). Layering Agno's own fallback on top would retry a fallback provider twice
+    # for the same failure — confirmed live: it doubled Gemini's 5-requests/minute consumption.
     return Agent(
         name="Intake Agent",
         model=model,
-        fallback_config=fallback_config,
         tools=[lookup_dispute],
         instructions=INSTRUCTIONS,
         output_schema=IntakeSummary,

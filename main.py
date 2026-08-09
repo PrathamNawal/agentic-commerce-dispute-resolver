@@ -52,18 +52,20 @@ def main() -> None:
     parser.add_argument("dispute_id", nargs="?", help="Dispute ID to resolve, e.g. D-001")
     parser.add_argument("--all", action="store_true", help="Resolve every dispute in the dataset")
     parser.add_argument("--model", default="llama-3.3-70b-versatile", help="Groq model id to use")
+    parser.add_argument("--no-cache", action="store_true", help="Force a live call, bypassing the response cache")
     args = parser.parse_args()
+    use_cache = not args.no_cache
 
     if args.all:
         for d in load_all_disputes():
-            print_result(resolve_dispute(d["id"], model_id=args.model))
+            print_result(resolve_dispute(d["id"], model_id=args.model, use_cache=use_cache))
         return
 
     if not args.dispute_id:
         parser.print_help()
         sys.exit(1)
 
-    print_result(resolve_dispute(args.dispute_id, model_id=args.model))
+    print_result(resolve_dispute(args.dispute_id, model_id=args.model, use_cache=use_cache))
 
 
 if __name__ == "__main__":

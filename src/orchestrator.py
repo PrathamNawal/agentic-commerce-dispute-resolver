@@ -15,8 +15,9 @@ the expected schema type — not just whether the call raised. Agno's built-in f
 covers the primary `model` on a rate-limit error, but a Groq failure inside `parser_model`
 (used by Intake/Policy to work around the JSON-mode + tool-calling conflict, see
 src/agents/intake.py) doesn't raise at all — it silently returns an error string as
-`.content`. _run_stage catches that by type-checking, and rebuilds the whole agent on
-OpenRouter as an explicit second attempt.
+`.content`. _run_stage catches that by type-checking, and walks
+model_config.FALLBACK_PROVIDER_ORDER (groq -> openrouter -> cerebras) rebuilding the whole
+agent on each until one produces the right schema, or the chain is exhausted.
 """
 
 from dataclasses import dataclass
@@ -28,7 +29,7 @@ from src.agents.intake import build_intake_agent
 from src.agents.policy import build_policy_agent
 from src.agents.resolution import build_resolution_agent
 from src.agents.reviewer import build_reviewer_agent
-from src.model_config import openrouter_available
+from src.model_config import FALLBACK_PROVIDER_ORDER, available_fallback_providers
 from src.observability import traced
 from src.schemas import IntakeSummary, PolicyFinding, ReviewScore, Resolution
 from src.tools.escalation_queue import queue_for_review
@@ -47,44 +48,47 @@ class PipelineResult:
 
 
 def _run_stage(build_agent: Callable[..., Agent], prompt: str, schema_type: Type[T]) -> T:
-    """Runs one agent stage; if the primary (Groq) call didn't produce the expected schema —
-    whether because it raised or because it silently returned bad content — rebuilds the same
-    agent on OpenRouter and retries once, if a key is configured."""
-    result = build_agent(provider="groq").run(prompt)
-    if isinstance(result.content, schema_type):
-        return result.content
+    """Runs one agent stage, walking FALLBACK_PROVIDER_ORDER (groq -> openrouter -> cerebras,
+    skipping any provider without a key configured) until one produces the expected schema —
+    whichever provider that content check fails on, whether by raising or by silently
+    returning bad content."""
+    providers_to_try = ["groq"] + available_fallback_providers()
+    last_content = None
 
-    if not openrouter_available():
-        raise RuntimeError(
-            f"{schema_type.__name__} stage failed and no OPENROUTER_API_KEY is set to fall "
-            f"back to: {result.content!r}"
-        )
+    for provider in providers_to_try:
+        result = build_agent(provider=provider).run(prompt)
+        if isinstance(result.content, schema_type):
+            return result.content
+        last_content = result.content
 
-    fallback_result = build_agent(provider="openrouter").run(prompt)
-    if isinstance(fallback_result.content, schema_type):
-        return fallback_result.content
-
+    tried = ", ".join(providers_to_try)
     raise RuntimeError(
-        f"{schema_type.__name__} stage failed on both Groq and the OpenRouter fallback: "
-        f"{fallback_result.content!r}"
+        f"{schema_type.__name__} stage failed on every available provider ({tried}). "
+        f"Last content: {last_content!r}. Configure another key from "
+        f"{FALLBACK_PROVIDER_ORDER[1:]} to extend the fallback chain."
     )
 
 
 def resolve_dispute_stream(
-    dispute_id: str, model_id: str = "llama-3.3-70b-versatile"
+    dispute_id: str, model_id: str = "llama-3.3-70b-versatile", use_cache: bool = True
 ) -> Iterator[Tuple[str, object]]:
     """Yields ("intake", IntakeSummary), ("policy", PolicyFinding), ("resolution", Resolution),
-    ("review", ReviewScore), then ("done", PipelineResult) as each stage completes."""
+    ("review", ReviewScore), then ("done", PipelineResult) as each stage completes.
+
+    use_cache=False forces a live call on every stage — needed for eval runs where a cached
+    result from an earlier run would defeat the point (e.g. the before/after prompt
+    comparison, which must measure the current prompt against a live model, not a cached
+    response from before the prompt changed)."""
 
     intake: IntakeSummary = _run_stage(
-        lambda provider: build_intake_agent(model_id, provider=provider),
+        lambda provider: build_intake_agent(model_id, provider=provider, use_cache=use_cache),
         f"Process dispute_id: {dispute_id}",
         IntakeSummary,
     )
     yield "intake", intake
 
     policy: PolicyFinding = _run_stage(
-        lambda provider: build_policy_agent(model_id, provider=provider),
+        lambda provider: build_policy_agent(model_id, provider=provider, use_cache=use_cache),
         f"Intake fault hypothesis: {intake.fault_hypothesis}\n"
         f"Intake summary: {intake.summary}\n"
         f"Key facts: {intake.key_facts}",
@@ -93,7 +97,7 @@ def resolve_dispute_stream(
     yield "policy", policy
 
     resolution: Resolution = _run_stage(
-        lambda provider: build_resolution_agent(model_id, provider=provider),
+        lambda provider: build_resolution_agent(model_id, provider=provider, use_cache=use_cache),
         f"Intake fault hypothesis: {intake.fault_hypothesis}\n"
         f"Intake summary: {intake.summary}\n"
         f"Key facts: {intake.key_facts}\n"
@@ -114,7 +118,7 @@ def resolve_dispute_stream(
 
     dispute_record = lookup_dispute_with_gold(dispute_id)
     review: ReviewScore = _run_stage(
-        lambda provider: build_reviewer_agent(model_id, provider=provider),
+        lambda provider: build_reviewer_agent(model_id, provider=provider, use_cache=use_cache),
         f"Dispute record: {dispute_record}\n"
         f"Intake: {intake.model_dump()}\n"
         f"Policy finding: {policy.model_dump()}\n"
@@ -133,9 +137,9 @@ def resolve_dispute_stream(
 
 
 @traced(name="dispute_pipeline")
-def resolve_dispute(dispute_id: str, model_id: str = "llama-3.3-70b-versatile") -> PipelineResult:
+def resolve_dispute(dispute_id: str, model_id: str = "llama-3.3-70b-versatile", use_cache: bool = True) -> PipelineResult:
     result: PipelineResult | None = None
-    for stage, payload in resolve_dispute_stream(dispute_id, model_id):
+    for stage, payload in resolve_dispute_stream(dispute_id, model_id, use_cache=use_cache):
         if stage == "done":
             result = payload
     assert result is not None

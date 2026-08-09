@@ -4,7 +4,7 @@ where useful, real-world merchant/ACP policy language) applicable to the intake'
 
 from agno.agent import Agent
 
-from src.model_config import build_fallback_config, build_model, build_openrouter_model
+from src.model_config import build_model, build_provider_model
 from src.schemas import PolicyFinding
 from src.tools.policy_search import get_platform_policy, search_merchant_policy
 
@@ -21,15 +21,20 @@ that states which resolution the policy supports and how confident you are.
 """
 
 
-def build_policy_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
-    if provider == "openrouter":
-        model, parser_model, fallback_config = build_openrouter_model(), build_openrouter_model(), None
+def build_policy_agent(
+    model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq", use_cache: bool = True
+) -> Agent:
+    if provider == "groq":
+        model = build_model(model_id, use_cache=use_cache)
+        parser_model = build_model(model_id, use_cache=use_cache)
     else:
-        model, parser_model, fallback_config = build_model(model_id), build_model(model_id), build_fallback_config()
+        model = build_provider_model(provider, use_cache=use_cache)
+        parser_model = build_provider_model(provider, use_cache=use_cache)
+    # No fallback_config — see intake.py for why: orchestrator._run_stage() covers the full
+    # chain explicitly without double-consuming a fallback provider's quota.
     return Agent(
         name="Policy Agent",
         model=model,
-        fallback_config=fallback_config,
         tools=[get_platform_policy, search_merchant_policy],
         instructions=INSTRUCTIONS,
         output_schema=PolicyFinding,

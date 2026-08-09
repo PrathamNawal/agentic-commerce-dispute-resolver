@@ -38,6 +38,31 @@ messages or chat history.
       models were tried first and failed — one had been pulled from OpenRouter's free tier
       entirely, the other had transient backend timeouts — confirming firsthand the "lineup
       rotates" warning in the zero-cost toolkit reference
+- [x] **Scalable quota strategy** — after repeatedly exhausting Groq + OpenRouter in one
+      session, researched and implemented a layered fix rather than just waiting out resets:
+      1. **Response caching** (`cache_response=True`, `CACHE_TTL_SECONDS=3600` in
+         `src/model_config.py`) — Agno's built-in disk cache, keyed on exact message content.
+         Directly targets the actual waste pattern: re-running the same unchanged eval
+         multiple times in one session. `--no-cache` on `main.py`/`evals/run_eval.py` forces
+         a live call when staleness would be wrong (the before/after comparison, specifically).
+      2. **Third fallback tier (Gemini)** — extended `FALLBACK_PROVIDER_ORDER` to
+         groq -> openrouter -> gemini. Requires `GOOGLE_API_KEY`.
+      3. **Removed a real inefficiency found via live testing**: agents originally set both
+         Agno's built-in `fallback_config` AND relied on `_run_stage()`'s explicit retry —
+         redundant, since `_run_stage` already covers every failure mode correctly (including
+         the parser_model gap Agno's fallback never covered). Layering both meant a single
+         failure could hit the same fallback provider twice. Removed `fallback_config` from
+         all four agents; `_run_stage` is now the only retry path.
+      **Honest result, not a solved-problem story**: live-tested Gemini's actual free-tier
+      limit for a fresh API key/project — 5 requests/minute AND only 20 requests/day for
+      `gemini-2.5-flash` — nowhere near the 250-1,500/day figures third-party research
+      reported. All three providers ended up exhausted in the same session. The caching layer
+      and the redundancy fix are real, verified wins; Gemini as a capacity *increase* is
+      unproven so far and may just be a new-project default that needs account age/usage
+      history to raise — don't assume it solves the volume problem until re-tested after some
+      natural usage accrues. Considered and explicitly declined for now: a one-time $10
+      OpenRouter top-up (50→1,000 req/day) — cheapest, highest-confidence fix, still on the
+      table if the free-only approach keeps being unreliable
 - [x] **Expand the dataset** beyond the 5 seed disputes — now 10, covering multi-item bundles,
       cross-border customs fees, a high-dollar guardrail test, an ambiguous-fault case, and a
       distinct subscription-cancellation failure

@@ -5,7 +5,7 @@ agents already gathered, it does not go fetch new facts.
 
 from agno.agent import Agent
 
-from src.model_config import build_fallback_config, build_model, build_openrouter_model
+from src.model_config import build_model, build_provider_model
 from src.schemas import Resolution
 
 INSTRUCTIONS = """\
@@ -33,15 +33,14 @@ Exit condition: you produce one complete Resolution and stop.
 """
 
 
-def build_resolution_agent(model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq") -> Agent:
-    if provider == "openrouter":
-        model, fallback_config = build_openrouter_model(), None
-    else:
-        model, fallback_config = build_model(model_id), build_fallback_config()
+def build_resolution_agent(
+    model_id: str = "llama-3.3-70b-versatile", *, provider: str = "groq", use_cache: bool = True
+) -> Agent:
+    model = build_model(model_id, use_cache=use_cache) if provider == "groq" else build_provider_model(provider, use_cache=use_cache)
+    # No fallback_config — see intake.py for why.
     return Agent(
         name="Resolution Agent",
         model=model,
-        fallback_config=fallback_config,
         instructions=INSTRUCTIONS,
         output_schema=Resolution,
         markdown=False,
