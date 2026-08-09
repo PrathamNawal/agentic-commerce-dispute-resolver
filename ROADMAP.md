@@ -138,17 +138,13 @@ messages or chat history.
       is itself a real confirmation the error-handling work holds up in production, not just
       locally. Try resolving a dispute again once quota resets to confirm the full live path.
       Free tier spins down after 15 min idle (cold start ~30-60s) — expected, not a bug
-- [x] **Auto-deploy on push** — `render.yaml` now sets `autoDeploy: true` explicitly rather
-      than relying on Render's default. This depends on two dashboard settings I can't check
-      or toggle myself (no dashboard access from here) — **verify both are on**:
-      1. The web service's own **Settings → Build & Deploy → Auto-Deploy** (should already
-         default to Yes for a GitHub-connected service — this just makes it explicit in code).
-      2. The **Blueprint's own Auto-Sync** setting (`Settings` on the Blueprint, not the
-         service) — this is what picks up *structural* `render.yaml` changes like the
-         `GOOGLE_API_KEY`/`GEMINI_MODEL` env var slots added earlier. Without it, those two
-         still need a manual "Manual sync" click (the button visible on the Blueprint's Syncs
-         page) before they show up as fillable fields — ordinary code-only pushes (no
-         render.yaml changes) auto-deploy regardless of this setting.
+- [x] **Auto-deploy on push — confirmed live, not just configured.** `render.yaml` sets
+      `autoDeploy: true` explicitly. Checked the service's Events log directly: every commit
+      since `e03e359` shows "New commit via Auto-Deploy" → "Deploy live," including `dbe510c`
+      (the `render.yaml` change adding this very setting) — live within 2 minutes of the push,
+      no manual sync click needed anywhere in the chain. Both dashboard settings this depends
+      on (service Auto-Deploy, Blueprint Auto-Sync) were already correctly on before this
+      session touched anything. Push to `main` → live on Render, done.
 - [x] **GitHub Actions CI** — [`.github/workflows/eval.yml`](.github/workflows/eval.yml) runs
       the eval harness on every push/PR to `main`, gated on a 30% decision-accuracy regression
       floor (deliberately below the ~50% baseline to absorb normal LLM run-to-run variance,
