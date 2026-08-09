@@ -104,14 +104,15 @@ messages or chat history.
 
 ## Phase 5 — Ship / Showcase
 
-- [ ] **Deploy the Streamlit demo to Render** — [`render.yaml`](render.yaml) Blueprint is
-      ready (free tier, `uv sync` build, env vars set to `sync: false` so keys go directly
-      into Render's dashboard, never committed). **The actual connection is a step only you
-      can do**: go to Render's dashboard, "New > Blueprint," connect this GitHub repo — that's
-      a one-time OAuth authorization that can't be scripted headlessly — then paste
-      `GROQ_API_KEY` / `OPENROUTER_API_KEY` / Langfuse keys into the service's environment
-      variables. Free tier spins down after 15 min idle (cold start ~30-60s) — expected, not
-      a bug if the first load after a while feels slow
+- [x] **Deploy the Streamlit demo to Render** — live at
+      [agentic-commerce-dispute-resolver.onrender.com](https://agentic-commerce-dispute-resolver.onrender.com/).
+      Blueprint connected, env vars set, service builds and serves correctly. **Functional
+      verification pending**: the first live resolve attempt hit the same exhausted Groq +
+      OpenRouter daily quotas as the rest of this session — and the app handled it exactly as
+      designed, showing the clean `st.error` message (see `app.py`) instead of crashing, which
+      is itself a real confirmation the error-handling work holds up in production, not just
+      locally. Try resolving a dispute again once quota resets to confirm the full live path.
+      Free tier spins down after 15 min idle (cold start ~30-60s) — expected, not a bug
 - [x] **GitHub Actions CI** — [`.github/workflows/eval.yml`](.github/workflows/eval.yml) runs
       the eval harness on every push/PR to `main`, gated on a 30% decision-accuracy regression
       floor (deliberately below the ~50% baseline to absorb normal LLM run-to-run variance,

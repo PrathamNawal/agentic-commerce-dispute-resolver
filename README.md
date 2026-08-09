@@ -1,5 +1,9 @@
 # Agentic Commerce Dispute Resolver
 
+**Live demo:** [agentic-commerce-dispute-resolver.onrender.com](https://agentic-commerce-dispute-resolver.onrender.com/)
+— free-tier Render instance, spins down after 15 min idle (first load after that: ~30-60s
+cold start, not a bug).
+
 A multi-agent system that triages and resolves disputes arising from **AI purchasing agents**
 transacting on a user's behalf  — not human-typed
 support tickets, but disputes where the buyer, the merchant, or the AI shopping agent itself
