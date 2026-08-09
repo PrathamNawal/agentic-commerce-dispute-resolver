@@ -29,6 +29,7 @@ from src.agents.intake import build_intake_agent
 from src.agents.policy import build_policy_agent
 from src.agents.resolution import build_resolution_agent
 from src.agents.reviewer import build_reviewer_agent
+from src.exceptions import CapacityExhaustedError, PipelineStageError, looks_like_capacity_issue
 from src.model_config import FALLBACK_PROVIDER_ORDER, available_fallback_providers
 from src.observability import traced
 from src.schemas import IntakeSummary, PolicyFinding, ReviewScore, Resolution
@@ -48,25 +49,31 @@ class PipelineResult:
 
 
 def _run_stage(build_agent: Callable[..., Agent], prompt: str, schema_type: Type[T]) -> T:
-    """Runs one agent stage, walking FALLBACK_PROVIDER_ORDER (groq -> openrouter -> cerebras,
+    """Runs one agent stage, walking FALLBACK_PROVIDER_ORDER (groq -> openrouter -> gemini,
     skipping any provider without a key configured) until one produces the expected schema —
     whichever provider that content check fails on, whether by raising or by silently
-    returning bad content."""
+    returning bad content.
+
+    Raises CapacityExhaustedError (not a bare RuntimeError) when every failure looks like a
+    rate-limit/quota condition — the UI treats that very differently from an actual bug, see
+    src/exceptions.py."""
     providers_to_try = ["groq"] + available_fallback_providers()
-    last_content = None
+    attempts: list[tuple[str, object]] = []
 
     for provider in providers_to_try:
         result = build_agent(provider=provider).run(prompt)
         if isinstance(result.content, schema_type):
             return result.content
-        last_content = result.content
+        attempts.append((provider, result.content))
 
     tried = ", ".join(providers_to_try)
-    raise RuntimeError(
-        f"{schema_type.__name__} stage failed on every available provider ({tried}). "
-        f"Last content: {last_content!r}. Configure another key from "
-        f"{FALLBACK_PROVIDER_ORDER[1:]} to extend the fallback chain."
+    details = "\n".join(f"  {p}: {c!r}" for p, c in attempts)
+    message = (
+        f"{schema_type.__name__} stage failed on every available provider ({tried}).\n{details}\n"
+        f"Configure another key from {FALLBACK_PROVIDER_ORDER[1:]} to extend the fallback chain."
     )
+    exc_cls = CapacityExhaustedError if looks_like_capacity_issue(*(c for _, c in attempts)) else PipelineStageError
+    raise exc_cls(message)
 
 
 def resolve_dispute_stream(

@@ -155,6 +155,29 @@ messages or chat history.
       no manual sync click needed anywhere in the chain. Both dashboard settings this depends
       on (service Auto-Deploy, Blueprint Auto-Sync) were already correctly on before this
       session touched anything. Push to `main` → live on Render, done.
+- [x] **Degraded-service customer experience** — the live-site failure surfaced a real product
+      gap: visitors saw a raw stack trace (`RESOURCE_EXHAUSTED`, `429`, quota IDs) with no way
+      to tell "known temporary limit" from "actual bug." Fixed properly, not cosmetically:
+      - `src/exceptions.py`: `CapacityExhaustedError` vs `PipelineStageError` — `_run_stage()`
+        in `src/orchestrator.py` classifies every failure by scanning provider error text for
+        rate-limit/quota keywords, so the UI can treat "free tier is busy" completely
+        differently from "something is broken."
+      - `app.py`: capacity failures get a plain-language message + a **Try again** button;
+        real bugs still surface full detail (behind a collapsed expander either way, not
+        thrown at the visitor first).
+      - Found and fixed a genuine Streamlit gotcha while wiring up "Try again": a button
+        nested only inside *another* button's branch can never detect its own click — the
+        code path that re-evaluates it only runs when the *other* button is true, which it
+        isn't on the rerun the nested button's own click causes. Diagnosed via a temporary
+        server-side debug print (not guesswork) after browser automation gave inconsistent
+        results; root cause turned out to be that Streamlit's `st.tabs()` switches are
+        client-side only and never hit the server, which had been masking the real test.
+        Fixed by moving the retry state to the top level of `live_demo_view()`, checked
+        unconditionally on every rerun. Verified live end-to-end: first failure → friendly
+        message → "Try again" → immediate live re-attempt, all working.
+      **Still open, deliberately not built this pass**: per-minute vs. per-day wording
+      differentiation, and a canned fallback example for true outages — both discussed, not
+      approved for this round.
 - [x] **GitHub Actions CI** — [`.github/workflows/eval.yml`](.github/workflows/eval.yml) runs
       the eval harness on every push/PR to `main`, gated on a 30% decision-accuracy regression
       floor (deliberately below the ~50% baseline to absorb normal LLM run-to-run variance,
